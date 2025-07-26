@@ -81,10 +81,19 @@ public class TtsApiClient {
                     try (AudioInputStream convertedStream = AudioSystem.getAudioInputStream(targetFormat, sourceStream)) {
                         Clip clip = AudioSystem.getClip();
 
+                        // Show speech bubble when audio starts
+                        if (Main.characterUI != null) {
+                            Main.characterUI.showSpeechBubble(text);
+                        }
+
                         // Use a LineListener to robustly wait for playback to finish
                         final Object lock = new Object();
                         clip.addLineListener(event -> {
                             if (event.getType() == LineEvent.Type.STOP) {
+                                // Hide speech bubble when audio stops
+                                if (Main.characterUI != null) {
+                                    Main.characterUI.hideSpeechBubble();
+                                }
                                 synchronized (lock) {
                                     lock.notify();
                                 }
@@ -102,10 +111,15 @@ public class TtsApiClient {
                     }
                 }
             } else {
-                System.err.println("Error from TTS API: " + response.statusCode());
+                System.err.println("TTS request failed with status: " + response.statusCode());
             }
         } catch (Exception e) {
+            System.err.println("Error during TTS playback: " + e.getMessage());
             e.printStackTrace();
+            // Hide speech bubble in case of error
+            if (Main.characterUI != null) {
+                Main.characterUI.hideSpeechBubble();
+            }
         }
     }
 }

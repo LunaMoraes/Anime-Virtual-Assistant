@@ -2,6 +2,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.IIOImage;
+import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -155,7 +159,9 @@ public class AssistantCore {
                     if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
                         System.out.println("Final response: " + rawResponse);
                         System.out.println("Speaking: " + finalResponseToSpeak);
-                        TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 1.0, AppState.selectedLanguage);
+
+                        // Let the TTS API handle language tagging - don't add tags here
+                        TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 0.7, AppState.selectedLanguage);
                     }
                 }
             } catch (Exception e) {
@@ -185,11 +191,12 @@ public class AssistantCore {
 
     private String getFinalResponse(String context) throws IOException, InterruptedException {
         String prompt = String.format(
-                "You are a tsundere AI assistant. A different AI analyzed the user's screen and gave this description: \"%s\". " +
-                        "Based on that description, make a brief, sassy, in-character comment about what the user is doing. " +
-                        "Start your response with a tsundere phrase like 'Hmph,' or 'Geez,'. " +
-                        "Do NOT repeat the description. Respond with ONLY your tsundere comment. " +
-                        "It's not like you care, baka!",
+                "You are a sassy tsundere AI girl. Based on this screen description: \"%s\" " +
+                        "Give a SHORT, sarcastic one-liner comment (maximum 15 words). " +
+                        "Mock the user, make a pun, or tease them about what they're doing. " +
+                        "Start with 'Hmph,' 'Geez,' or 'Ugh,'. Be playful and mean but cute. " +
+                        "Examples: 'Hmph, still debugging? How... predictable.' or 'Geez, another browser tab? Multitasking much?' " +
+                        "Keep it SHORT and sassy!",
                 context.replace("\"", "'")
         );
         return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
@@ -213,7 +220,7 @@ public class AssistantCore {
         System.out.println("JSON Payload size: " + jsonPayload.length() + " characters");
 
         // Realistic timeouts - DeepSeek-R1 needs more time for reasoning
-        int timeoutSeconds = (images != null && !images.isEmpty()) ? 30 : 45; // 30s for vision, 45s for reasoning models like DeepSeek-R1
+        int timeoutSeconds = (images != null && !images.isEmpty()) ? 45 : 45; // 30s for vision, 45s for reasoning models like DeepSeek-R1
 
         // Create a new client for each request with proper timeouts
         HttpClient client = HttpClient.newBuilder()
@@ -266,9 +273,9 @@ public class AssistantCore {
     }
 
     private String encodeImageToBase64(BufferedImage image) throws IOException {
-        // Reduce image size even more to avoid timeouts
-        int maxWidth = 400; // Reduced from 800
-        int maxHeight = 300; // Reduced from 600
+        // Back to 800x600 resolution for reliable performance without timeouts
+        int maxWidth = 800;  // Back to working size
+        int maxHeight = 600; // Back to working size
 
         // Calculate scaling to fit within max dimensions
         double scaleX = (double) maxWidth / image.getWidth();
@@ -289,7 +296,7 @@ public class AssistantCore {
                 image.getWidth(), image.getHeight(), newWidth, newHeight, scale);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        // Use JPEG with lower quality to reduce size further
+        // Use standard JPEG compression
         ImageIO.write(resizedImage, "jpg", baos);
         byte[] imageBytes = baos.toByteArray();
         String base64 = Base64.getEncoder().encodeToString(imageBytes);

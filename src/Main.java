@@ -9,6 +9,7 @@ import java.util.List;
 public class Main {
     // A static reference to the core logic so the UI can access it.
     public static AssistantCore assistantCore;
+    public static CharacterUI characterUI; // Add global reference to CharacterUI
 
     public static void main(String[] args) {
         // 1. Fetch available voices from the TTS API before starting the UI.
@@ -33,7 +34,8 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             new SettingsWindow(voices.toArray(new String[0]));
             try {
-                new CharacterUI().setVisible(true);
+                characterUI = new CharacterUI(); // Store reference globally
+                characterUI.setVisible(true);
             } catch (IOException e) {
                 System.err.println("Failed to load character image. Please check the URL.");
                 e.printStackTrace();

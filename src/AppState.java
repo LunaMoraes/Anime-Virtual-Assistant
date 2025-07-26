@@ -15,7 +15,7 @@ public class AppState {
     public static final String TTS_API_URL = "http://localhost:5001";
 
     // --- UI Configuration ---
-    public static final String CHARACTER_IMAGE_URL = "https://i.imgur.com/p4u1tB0.png";
+    public static final String CHARACTER_IMAGE_URL = "src/pngegg.png";
 
     // --- Shared State (volatile ensures thread safety) ---
     public static volatile String selectedTtsCharacterVoice = null;
