@@ -1,18 +1,17 @@
 /**
  * Holds all the shared configuration and state for the application.
- * This version defines both the vision and language models.
+ * This version uses a separate Python service for vision and Ollama for language.
  */
 public class AppState {
 
-    // --- Ollama Configuration ---
+    // --- Service URLs ---
     public static final String OLLAMA_API_URL = "http://localhost:11434/api/generate";
-
-    // Define both models for our two-step process
-    public static final String VISION_MODEL = "qwen2.5vl:3b"; // For analyzing images
-    public static final String LANGUAGE_MODEL = "deepseek-r1:8b"; // For generating the final response
-
-    // --- TTS Configuration ---
+    public static final String VISION_API_URL = "http://localhost:5002/describe"; // URL for the new Python vision server
     public static final String TTS_API_URL = "http://localhost:5001";
+
+    // --- Model Configuration ---
+    // The vision model is now handled by the Python service, so we only define the language model here.
+    public static final String LANGUAGE_MODEL = "qwen2:7b";
 
     // --- UI Configuration ---
     public static final String CHARACTER_IMAGE_URL = "src/pngegg.png";
