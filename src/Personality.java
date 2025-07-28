@@ -2,8 +2,7 @@ import java.util.List;
 
 /**
  * Represents a personality configuration for the AI assistant.
- * Each personality has a name, a specific prompt, and attributes for future features.
- * UPDATED: Now includes paths for static and speaking images.
+ * UPDATED: Now includes a 'lastResponse' field to act as short-term memory.
  */
 public class Personality {
     // These fields are loaded from JSON
@@ -11,10 +10,10 @@ public class Personality {
     private String prompt;
     private List<String> attributes;
 
-    // These fields are set programmatically after loading
+    // These fields are set programmatically
     private transient String staticImagePath;
     private transient String speakingImagePath;
-
+    private transient String lastResponse = ""; // Short-term memory for the last spoken line
 
     // Default constructor for Gson
     public Personality() {}
@@ -43,8 +42,6 @@ public class Personality {
         this.attributes = attributes;
     }
 
-    // --- Image Path Getters and Setters ---
-
     public String getStaticImagePath() {
         return staticImagePath;
     }
@@ -61,9 +58,16 @@ public class Personality {
         this.speakingImagePath = speakingImagePath;
     }
 
+    public String getLastResponse() {
+        return lastResponse;
+    }
+
+    public void setLastResponse(String lastResponse) {
+        this.lastResponse = lastResponse;
+    }
 
     @Override
     public String toString() {
-        return name; // This will be used in UI components like radio buttons
+        return name;
     }
 }

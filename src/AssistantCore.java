@@ -81,7 +81,7 @@ public class AssistantCore {
         new Thread(() -> {
             try {
                 System.out.println("Analyzing screenshot with vision service...");
-                String imageDescription = getImageDescription(images.get(0)); // Pass the single image
+                String imageDescription = getImageDescription(images.get(0));
                 if (imageDescription == null || imageDescription.isBlank()) {
                     System.err.println("Vision service did not return a description.");
                 } else {
@@ -94,6 +94,13 @@ public class AssistantCore {
                         System.out.println("Final response: " + rawResponse);
                         System.out.println("Speaking: " + finalResponseToSpeak);
                         TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 0.7, AppState.selectedLanguage);
+
+                        // --- MEMORY UPDATE ---
+                        // Save the newly generated response to the personality's memory.
+                        if (AppState.selectedPersonality != null) {
+                            AppState.selectedPersonality.setLastResponse(finalResponseToSpeak);
+                            System.out.println("Saved to memory: \"" + finalResponseToSpeak + "\"");
+                        }
                     }
                 }
             } catch (Exception e) {
@@ -116,72 +123,73 @@ public class AssistantCore {
         return rawResponse.trim();
     }
 
-    /**
-     * MODIFIED: This method now calls the external Python vision service.
-     */
     private String getImageDescription(BufferedImage image) throws IOException, InterruptedException {
-        // UPDATED PROMPT: Instructs the vision model to avoid meta-commentary.
-        String prompt = "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'. Include information about the aplication currently open, and what is going on within it.";
+        String prompt = "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.";
         String base64Image = encodeImageToBase64(image);
-
         Map<String, String> payload = Map.of("prompt", prompt, "image", base64Image);
         String jsonPayload = gson.toJson(payload);
-
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(AppState.VISION_API_URL))
                 .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(60)) // Give the vision model enough time
+                .timeout(Duration.ofSeconds(60))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
-
         System.out.println("Sending request to Python vision service...");
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
         if (response.statusCode() == 200) {
             JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
             String description = jsonObject.get("description").getAsString();
-
-            // ADDED SAFEGUARD: Manually remove any lingering "screenshot" mentions.
             return description.replaceAll("(?i)screenshot", "activity");
-
         } else {
             System.err.printf("Error from vision service: %d - %s%n", response.statusCode(), response.body());
             return null;
         }
     }
 
+    /**
+     * UPDATED: This method now appends the last response to the prompt to ensure variety.
+     */
     private String getFinalResponse(String context) throws IOException, InterruptedException {
-        String personalityPrompt = AppState.getCurrentPersonalityPrompt();
-        if (personalityPrompt == null) {
-            System.err.println("No personality selected, using fallback prompt");
-            personalityPrompt = "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
+        Personality currentPersonality = AppState.selectedPersonality;
+        if (currentPersonality == null) {
+            System.err.println("No personality selected, using fallback prompt.");
+            String fallbackPrompt = "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
+            return callOllama(AppState.LANGUAGE_MODEL, String.format(fallbackPrompt, context.replace("\"", "'")), null);
         }
 
-        String prompt = String.format(personalityPrompt, context.replace("\"", "'"));
-        // This now only calls Ollama for the language model
-        return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
+        String personalityPrompt = currentPersonality.getPrompt();
+        String lastResponse = currentPersonality.getLastResponse();
+
+        // Build the final prompt with the personality and memory context
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append(String.format(personalityPrompt, context.replace("\"", "'")));
+
+        // Add the memory instruction if a previous response exists
+        if (lastResponse != null && !lastResponse.isEmpty()) {
+            promptBuilder.append(" Your previous comment was: \"");
+            promptBuilder.append(lastResponse.replace("\"", "'"));
+            promptBuilder.append("\". Your new comment MUST be different.");
+        }
+
+        String finalPrompt = promptBuilder.toString();
+        System.out.println("Final prompt sent to LLM: " + finalPrompt);
+
+        return callOllama(AppState.LANGUAGE_MODEL, finalPrompt, null);
     }
 
     private String callOllama(String model, String prompt, List<BufferedImage> images) throws IOException, InterruptedException {
-        // This method is now only used for text generation, so the 'images' parameter will be null.
         Map<String, Object> payload = Map.of("model", model, "prompt", prompt, "stream", false);
         String jsonPayload = gson.toJson(payload);
-
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
-
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(AppState.OLLAMA_API_URL))
                 .header("Content-Type", "application/json")
                 .timeout(Duration.ofSeconds(45))
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                 .build();
-
         System.out.printf("Sending request to Ollama for model: %s...%n", model);
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
         if (response.statusCode() == 200) {
             JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
             return jsonObject.get("response").getAsString().trim();
@@ -194,17 +202,14 @@ public class AssistantCore {
     private String encodeImageToBase64(BufferedImage image) throws IOException {
         int maxWidth = 800;
         int maxHeight = 600;
-
         double scale = Math.min(Math.min((double) maxWidth / image.getWidth(), (double) maxHeight / image.getHeight()), 1.0);
         int newWidth = (int) (image.getWidth() * scale);
         int newHeight = (int) (image.getHeight() * scale);
-
         BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = resizedImage.createGraphics();
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2d.drawImage(image, 0, 0, newWidth, newHeight, null);
         g2d.dispose();
-
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ImageIO.write(resizedImage, "jpg", baos);
         byte[] imageBytes = baos.toByteArray();
