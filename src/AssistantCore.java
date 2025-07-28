@@ -197,8 +197,8 @@ public class AssistantCore {
         String apiKey = AppState.getApiKey();
 
         if (apiUrl == null || apiKey == null) {
-            System.err.println("API configuration not available, falling back to local model");
-            return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
+            System.err.println("API configuration not available");
+            return null;
         }
 
         // Build the request payload for Google Gemini API
@@ -245,8 +245,7 @@ public class AssistantCore {
             return null;
         } else {
             System.err.printf("Error from external API: %d - %s%n", response.statusCode(), response.body());
-            System.err.println("Falling back to local model");
-            return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
+            return null;
         }
     }
 
