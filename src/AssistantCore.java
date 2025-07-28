@@ -155,7 +155,7 @@ public class AssistantCore {
         if (currentPersonality == null) {
             System.err.println("No personality selected, using fallback prompt.");
             String fallbackPrompt = "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
-            return callOllama(AppState.LANGUAGE_MODEL, String.format(fallbackPrompt, context.replace("\"", "'")), null);
+            return callLanguageModel(String.format(fallbackPrompt, context.replace("\"", "'")));
         }
 
         String personalityPrompt = currentPersonality.getPrompt();
@@ -175,7 +175,79 @@ public class AssistantCore {
         String finalPrompt = promptBuilder.toString();
         System.out.println("Final prompt sent to LLM: " + finalPrompt);
 
-        return callOllama(AppState.LANGUAGE_MODEL, finalPrompt, null);
+        return callLanguageModel(finalPrompt);
+    }
+
+    /**
+     * Calls either the local Ollama model or the external API based on configuration
+     */
+    private String callLanguageModel(String prompt) throws IOException, InterruptedException {
+        if (AppState.useApiModel && AppState.isApiConfigAvailable()) {
+            return callExternalApi(prompt);
+        } else {
+            return callOllama(AppState.getCurrentModelName(), prompt, null);
+        }
+    }
+
+    /**
+     * Calls external API (Google Gemini) for language model inference
+     */
+    private String callExternalApi(String prompt) throws IOException, InterruptedException {
+        String apiUrl = AppState.getApiUrl();
+        String apiKey = AppState.getApiKey();
+
+        if (apiUrl == null || apiKey == null) {
+            System.err.println("API configuration not available, falling back to local model");
+            return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
+        }
+
+        // Build the request payload for Google Gemini API
+        Map<String, Object> content = Map.of(
+            "parts", List.of(Map.of("text", prompt))
+        );
+        Map<String, Object> payload = Map.of(
+            "contents", List.of(content),
+            "generationConfig", Map.of(
+                "temperature", 0.7,
+                "maxOutputTokens", 100
+            )
+        );
+
+        String jsonPayload = gson.toJson(payload);
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
+
+        String fullUrl = apiUrl + "?key=" + apiKey;
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(fullUrl))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(45))
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+
+        System.out.println("Sending request to external API: " + AppState.getCurrentModelName());
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+            if (jsonObject.has("candidates") && jsonObject.getAsJsonArray("candidates").size() > 0) {
+                JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
+                if (candidate.has("content")) {
+                    JsonObject content2 = candidate.getAsJsonObject("content");
+                    if (content2.has("parts") && content2.getAsJsonArray("parts").size() > 0) {
+                        JsonObject part = content2.getAsJsonArray("parts").get(0).getAsJsonObject();
+                        if (part.has("text")) {
+                            return part.get("text").getAsString().trim();
+                        }
+                    }
+                }
+            }
+            System.err.println("Unexpected API response format: " + response.body());
+            return null;
+        } else {
+            System.err.printf("Error from external API: %d - %s%n", response.statusCode(), response.body());
+            System.err.println("Falling back to local model");
+            return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
+        }
     }
 
     private String callOllama(String model, String prompt, List<BufferedImage> images) throws IOException, InterruptedException {

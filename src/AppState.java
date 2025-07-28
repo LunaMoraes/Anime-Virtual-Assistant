@@ -20,6 +20,10 @@ public class AppState {
     // The vision model is now handled by the Python service, so we only define the language model here.
     public static final String LANGUAGE_MODEL = "qwen2:7b";
 
+    // --- New: Model Type Configuration ---
+    public static volatile boolean useApiModel = false; // false = local, true = API
+    private static SystemConfig systemConfig = null;
+
     // --- UI Configuration ---
     // This is now a fallback image if a personality's image is not found.
     public static final String FALLBACK_IMAGE_URL = "src/pngegg.png";
@@ -39,6 +43,9 @@ public class AppState {
      * Loads all personality JSON files and constructs their image paths.
      */
     public static void loadPersonalities() {
+        // Load system configuration first
+        systemConfig = SystemConfig.loadSystemConfig();
+
         availablePersonalities.clear();
         Gson gson = new Gson();
 
@@ -98,5 +105,46 @@ public class AppState {
 
     public static String getCurrentPersonalityPrompt() {
         return selectedPersonality != null ? selectedPersonality.getPrompt() : null;
+    }
+
+    // --- New: Model Type Management ---
+
+    /**
+     * Gets the current model name based on the selected mode (local or API)
+     */
+    public static String getCurrentModelName() {
+        if (useApiModel && systemConfig != null) {
+            return systemConfig.getModelName();
+        }
+        return LANGUAGE_MODEL;
+    }
+
+    /**
+     * Gets the API URL for external model requests
+     */
+    public static String getApiUrl() {
+        return systemConfig != null ? systemConfig.getUrl() : null;
+    }
+
+    /**
+     * Gets the API key for external model requests
+     */
+    public static String getApiKey() {
+        return systemConfig != null ? systemConfig.getKey() : null;
+    }
+
+    /**
+     * Sets whether to use API model or local model
+     */
+    public static void setUseApiModel(boolean useApi) {
+        useApiModel = useApi;
+        System.out.println("Model type changed to: " + (useApi ? "API" : "Local"));
+    }
+
+    /**
+     * Checks if system configuration is available for API usage
+     */
+    public static boolean isApiConfigAvailable() {
+        return systemConfig != null && systemConfig.getKey() != null && systemConfig.getUrl() != null;
     }
 }
