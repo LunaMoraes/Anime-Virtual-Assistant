@@ -11,16 +11,13 @@ import java.util.Map;
 
 /**
  * Handles all communication with the Python TTS API server.
+ * UPDATED: Now controls the character image state (speaking/static).
  */
 public class TtsApiClient {
 
     private static final HttpClient client = HttpClient.newHttpClient();
     private static final Gson gson = new Gson();
 
-    /**
-     * Fetches the list of available character voices from the TTS API.
-     * @return A list of character names, or null if an error occurs.
-     */
     public static List<String> getAvailableCharacters() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -36,13 +33,6 @@ public class TtsApiClient {
         return null;
     }
 
-    /**
-     * Sends text to the TTS API to be converted to speech.
-     * @param text The text to synthesize.
-     * @param characterName The voice to use.
-     * @param speed The speed of the speech.
-     * @param language The language of the text.
-     */
     public static void speak(String text, String characterName, double speed, String language) {
         try {
             Map<String, Object> payloadMap = Map.of(
@@ -60,13 +50,19 @@ public class TtsApiClient {
                     .build();
 
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
             if (response.statusCode() == 200) {
+                // Show speaking image and bubble as soon as we get a valid response
+                if (Main.characterUI != null) {
+                    Main.characterUI.showSpeakingImage();
+                    Main.characterUI.showSpeechBubble(text);
+                }
+
                 byte[] audioBytes = response.body().readAllBytes();
                 InputStream byteArrayInputStream = new ByteArrayInputStream(audioBytes);
 
                 try (AudioInputStream sourceStream = AudioSystem.getAudioInputStream(byteArrayInputStream)) {
                     AudioFormat sourceFormat = sourceStream.getFormat();
-                    // Define a standard, compatible audio format
                     AudioFormat targetFormat = new AudioFormat(
                             AudioFormat.Encoding.PCM_SIGNED,
                             sourceFormat.getSampleRate(),
@@ -77,21 +73,15 @@ public class TtsApiClient {
                             false
                     );
 
-                    // Convert the audio stream to the compatible format
                     try (AudioInputStream convertedStream = AudioSystem.getAudioInputStream(targetFormat, sourceStream)) {
                         Clip clip = AudioSystem.getClip();
-
-                        // Show speech bubble when audio starts
-                        if (Main.characterUI != null) {
-                            Main.characterUI.showSpeechBubble(text);
-                        }
-
-                        // Use a LineListener to robustly wait for playback to finish
                         final Object lock = new Object();
+
                         clip.addLineListener(event -> {
                             if (event.getType() == LineEvent.Type.STOP) {
-                                // Hide speech bubble when audio stops
+                                // Revert to static image and hide bubble when done
                                 if (Main.characterUI != null) {
+                                    Main.characterUI.showStaticImage();
                                     Main.characterUI.hideSpeechBubble();
                                 }
                                 synchronized (lock) {
@@ -102,8 +92,6 @@ public class TtsApiClient {
 
                         clip.open(convertedStream);
                         clip.start();
-
-                        // Wait here until the LineListener notifies us that playback is complete
                         synchronized (lock) {
                             lock.wait();
                         }
@@ -112,12 +100,18 @@ public class TtsApiClient {
                 }
             } else {
                 System.err.println("TTS request failed with status: " + response.statusCode());
+                // Ensure UI resets on failure
+                if (Main.characterUI != null) {
+                    Main.characterUI.showStaticImage();
+                    Main.characterUI.hideSpeechBubble();
+                }
             }
         } catch (Exception e) {
             System.err.println("Error during TTS playback: " + e.getMessage());
             e.printStackTrace();
-            // Hide speech bubble in case of error
+            // Ensure UI resets on error
             if (Main.characterUI != null) {
+                Main.characterUI.showStaticImage();
                 Main.characterUI.hideSpeechBubble();
             }
         }

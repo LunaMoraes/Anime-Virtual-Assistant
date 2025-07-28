@@ -4,46 +4,36 @@ import java.util.List;
 
 /**
  * The main entry point for the AI Assistant application.
- * This class initializes and coordinates all the other components.
+ * UPDATED: Initializes CharacterUI without IOExceptions in the constructor.
  */
 public class Main {
-    // A static reference to the core logic so the UI can access it.
     public static AssistantCore assistantCore;
-    public static CharacterUI characterUI; // Add global reference to CharacterUI
+    public static CharacterUI characterUI;
 
     public static void main(String[] args) {
-        // 1. Load personalities from JSON files
         System.out.println("Loading personalities from data folder...");
         AppState.loadPersonalities();
 
-        // 2. Fetch available voices from the TTS API before starting the UI.
         System.out.println("Fetching available TTS characters...");
         List<String> voices = TtsApiClient.getAvailableCharacters();
 
-        // If the TTS API isn't running, show an error and exit.
         if (voices == null || voices.isEmpty()) {
             JOptionPane.showMessageDialog(null, "Could not connect to the TTS API Server.\nPlease ensure api.py is running.", "Connection Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // 3. Set the initial voice in the shared application state.
         AppState.selectedTtsCharacterVoice = voices.get(0);
         System.out.println("TTS voices found. Default voice: " + AppState.selectedTtsCharacterVoice);
 
-        // 4. Instantiate the core logic but do not start it automatically.
-        // The Start/Stop button in the SettingsWindow will control it.
         assistantCore = new AssistantCore();
 
-        // 5. Create and show the UI components on the Swing Event Dispatch Thread.
         SwingUtilities.invokeLater(() -> {
+            // Create CharacterUI first so it can be updated by SettingsWindow
+            characterUI = new CharacterUI();
+            characterUI.setVisible(true);
+
+            // Now create SettingsWindow, which will trigger the initial image load via AppState
             new SettingsWindow(voices.toArray(new String[0]));
-            try {
-                characterUI = new CharacterUI(); // Store reference globally
-                characterUI.setVisible(true);
-            } catch (IOException e) {
-                System.err.println("Failed to load character image. Please check the URL.");
-                e.printStackTrace();
-            }
         });
     }
 }

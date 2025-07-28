@@ -120,7 +120,8 @@ public class AssistantCore {
      * MODIFIED: This method now calls the external Python vision service.
      */
     private String getImageDescription(BufferedImage image) throws IOException, InterruptedException {
-        String prompt = "You are a factual screen analyzer. Describe the content of this screenshot in a detailed, neutral way. Focus on what the user is doing.";
+        // UPDATED PROMPT: Instructs the vision model to avoid meta-commentary.
+        String prompt = "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'. Include information about the aplication currently open, and what is going on within it.";
         String base64Image = encodeImageToBase64(image);
 
         Map<String, String> payload = Map.of("prompt", prompt, "image", base64Image);
@@ -139,7 +140,11 @@ public class AssistantCore {
 
         if (response.statusCode() == 200) {
             JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-            return jsonObject.get("description").getAsString();
+            String description = jsonObject.get("description").getAsString();
+
+            // ADDED SAFEGUARD: Manually remove any lingering "screenshot" mentions.
+            return description.replaceAll("(?i)screenshot", "activity");
+
         } else {
             System.err.printf("Error from vision service: %d - %s%n", response.statusCode(), response.body());
             return null;

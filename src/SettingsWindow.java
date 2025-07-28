@@ -110,7 +110,7 @@ public class SettingsWindow extends JFrame {
 
             // Set selected if this is the current personality
             if (AppState.selectedPersonality != null &&
-                personality.getName().equals(AppState.selectedPersonality.getName())) {
+                    personality.getName().equals(AppState.selectedPersonality.getName())) {
                 radioButton.setSelected(true);
             }
 
