@@ -53,7 +53,7 @@ public class AssistantCore {
             synchronized (screenshotBuffer) {
                 screenshotBuffer.add(screenshot);
                 if (screenshotBuffer.size() > 4) {
-                    screenshotBuffer.remove(0);
+                    screenshotBuffer.removeFirst();
                 }
             }
         } catch (AWTException e) {
@@ -74,14 +74,14 @@ public class AssistantCore {
                 return;
             }
             images = new ArrayList<>();
-            images.add(screenshotBuffer.get(screenshotBuffer.size() - 1));
+            images.add(screenshotBuffer.getLast());
             screenshotBuffer.clear();
         }
 
         new Thread(() -> {
             try {
                 System.out.println("Analyzing screenshot with vision service...");
-                String imageDescription = getImageDescription(images.get(0));
+                String imageDescription = getImageDescription(images.getFirst());
                 if (imageDescription == null || imageDescription.isBlank()) {
                     System.err.println("Vision service did not return a description.");
                 } else {
@@ -125,25 +125,112 @@ public class AssistantCore {
 
     private String getImageDescription(BufferedImage image) throws IOException, InterruptedException {
         String prompt = "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.";
-        String base64Image = encodeImageToBase64(image);
-        Map<String, String> payload = Map.of("prompt", prompt, "image", base64Image);
-        String jsonPayload = gson.toJson(payload);
-        HttpClient client = HttpClient.newHttpClient();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(AppState.VISION_API_URL))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                .build();
-        System.out.println("Sending request to Python vision service...");
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() == 200) {
-            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-            String description = jsonObject.get("description").getAsString();
-            return description.replaceAll("(?i)screenshot", "activity");
+
+        if (AppState.useApiVision && AppState.getVisionApiUrl() != null) {
+            // Use external vision API
+            return callExternalVisionApi(prompt, image);
         } else {
-            System.err.printf("Error from vision service: %d - %s%n", response.statusCode(), response.body());
+            // Use local Python vision service
+            String base64Image = encodeImageToBase64(image);
+            Map<String, String> payload = Map.of("prompt", prompt, "image", base64Image);
+            String jsonPayload = gson.toJson(payload);
+            HttpClient client = HttpClient.newHttpClient();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(AppState.VISION_API_URL))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(60))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
+            System.out.println("Sending request to Python vision service...");
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+                String description = jsonObject.get("description").getAsString();
+                return description.replaceAll("(?i)screenshot", "activity");
+            } else {
+                System.err.printf("Error from vision service: %d - %s%n", response.statusCode(), response.body());
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Calls external vision API (Google Gemini Vision) for image analysis
+     */
+    private String callExternalVisionApi(String prompt, BufferedImage image) throws IOException, InterruptedException {
+        String apiUrl = AppState.getVisionApiUrl();
+        String apiKey = AppState.getVisionApiKey();
+
+        if (apiUrl == null) {
+            System.err.println("Vision API URL not configured in system.json");
             return null;
+        }
+
+        if (apiKey == null) {
+            System.err.println("Vision API key not configured in system.json");
+            return null;
+        }
+
+        System.out.println("Using Vision API: " + AppState.getVisionModelName());
+        String base64Image = encodeImageToBase64(image);
+
+        // Build the request payload for Google Gemini Vision API
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> imagePart = Map.of(
+            "inline_data", Map.of(
+                "mime_type", "image/jpeg",
+                "data", base64Image
+            )
+        );
+
+        Map<String, Object> content = Map.of(
+            "parts", List.of(textPart, imagePart)
+        );
+
+        Map<String, Object> payload = Map.of(
+            "contents", List.of(content),
+            "generationConfig", Map.of(
+                "temperature", 0.4,
+                "maxOutputTokens", 200
+            )
+        );
+
+        String jsonPayload = gson.toJson(payload);
+
+        try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()) {
+            String fullUrl = apiUrl + "?key=" + apiKey;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(fullUrl))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(60))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
+
+            System.out.println("Sending vision request to: " + apiUrl);
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (jsonObject.has("candidates") && !jsonObject.getAsJsonArray("candidates").isEmpty()) {
+                    JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
+                    if (candidate.has("content")) {
+                        JsonObject content2 = candidate.getAsJsonObject("content");
+                        if (content2.has("parts") && !content2.getAsJsonArray("parts").isEmpty()) {
+                            JsonObject part = content2.getAsJsonArray("parts").get(0).getAsJsonObject();
+                            if (part.has("text")) {
+                                String description = part.get("text").getAsString().trim();
+                                System.out.println("Vision API response received successfully");
+                                return description.replaceAll("(?i)screenshot", "activity");
+                            }
+                        }
+                    }
+                }
+                System.err.println("Vision API returned unexpected response format: " + response.body());
+                return null;
+            } else {
+                System.err.printf("Vision API error - Status: %d, Response: %s%n", response.statusCode(), response.body());
+                return null;
+            }
         }
     }
 
@@ -182,7 +269,7 @@ public class AssistantCore {
      * Calls either the local Ollama model or the external API based on configuration
      */
     private String callLanguageModel(String prompt) throws IOException, InterruptedException {
-        if (AppState.useApiModel && AppState.isApiConfigAvailable()) {
+        if (AppState.useApiAnalysis && AppState.isAnalysisApiConfigAvailable()) {
             return callExternalApi(prompt);
         } else {
             return callOllama(AppState.getCurrentModelName(), prompt, null);
@@ -196,10 +283,17 @@ public class AssistantCore {
         String apiUrl = AppState.getApiUrl();
         String apiKey = AppState.getApiKey();
 
-        if (apiUrl == null || apiKey == null) {
-            System.err.println("API configuration not available");
+        if (apiUrl == null) {
+            System.err.println("Analysis API URL not configured in system.json");
             return null;
         }
+
+        if (apiKey == null) {
+            System.err.println("Analysis API key not configured in system.json");
+            return null;
+        }
+
+        System.out.println("Using Analysis API: " + AppState.getCurrentModelName());
 
         // Build the request payload for Google Gemini API
         Map<String, Object> content = Map.of(
@@ -214,38 +308,40 @@ public class AssistantCore {
         );
 
         String jsonPayload = gson.toJson(payload);
-        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
-        String fullUrl = apiUrl + "?key=" + apiKey;
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(fullUrl))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(45))
-                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                .build();
+        try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()) {
+            String fullUrl = apiUrl + "?key=" + apiKey;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(fullUrl))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(45))
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                    .build();
 
-        System.out.println("Sending request to external API: " + AppState.getCurrentModelName());
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.out.println("Sending analysis request to: " + apiUrl);
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (response.statusCode() == 200) {
-            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-            if (jsonObject.has("candidates") && jsonObject.getAsJsonArray("candidates").size() > 0) {
-                JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
-                if (candidate.has("content")) {
-                    JsonObject content2 = candidate.getAsJsonObject("content");
-                    if (content2.has("parts") && content2.getAsJsonArray("parts").size() > 0) {
-                        JsonObject part = content2.getAsJsonArray("parts").get(0).getAsJsonObject();
-                        if (part.has("text")) {
-                            return part.get("text").getAsString().trim();
+            if (response.statusCode() == 200) {
+                JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
+                if (jsonObject.has("candidates") && !jsonObject.getAsJsonArray("candidates").isEmpty()) {
+                    JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
+                    if (candidate.has("content")) {
+                        JsonObject content2 = candidate.getAsJsonObject("content");
+                        if (content2.has("parts") && !content2.getAsJsonArray("parts").isEmpty()) {
+                            JsonObject part = content2.getAsJsonArray("parts").get(0).getAsJsonObject();
+                            if (part.has("text")) {
+                                System.out.println("Analysis API response received successfully");
+                                return part.get("text").getAsString().trim();
+                            }
                         }
                     }
                 }
+                System.err.println("Analysis API returned unexpected response format: " + response.body());
+                return null;
+            } else {
+                System.err.printf("Analysis API error - Status: %d, Response: %s%n", response.statusCode(), response.body());
+                return null;
             }
-            System.err.println("Unexpected API response format: " + response.body());
-            return null;
-        } else {
-            System.err.printf("Error from external API: %d - %s%n", response.statusCode(), response.body());
-            return null;
         }
     }
 
@@ -271,8 +367,8 @@ public class AssistantCore {
     }
 
     private String encodeImageToBase64(BufferedImage image) throws IOException {
-        int maxWidth = 800;
-        int maxHeight = 600;
+        int maxWidth = 1280;
+        int maxHeight = 720;
         double scale = Math.min(Math.min((double) maxWidth / image.getWidth(), (double) maxHeight / image.getHeight()), 1.0);
         int newWidth = (int) (image.getWidth() * scale);
         int newHeight = (int) (image.getHeight() * scale);

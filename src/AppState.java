@@ -18,10 +18,11 @@ public class AppState {
 
     // --- Model Configuration ---
     // The vision model is now handled by the Python service, so we only define the language model here.
-    public static final String LANGUAGE_MODEL = "qwen2:7b";
+    public static final String LANGUAGE_MODEL = "qwen3:4b";
 
     // --- New: Model Type Configuration ---
-    public static volatile boolean useApiModel = false; // false = local, true = API
+    public static volatile boolean useApiVision = false; // false = local Python, true = API
+    public static volatile boolean useApiAnalysis = false; // false = local Ollama, true = API
     private static SystemConfig systemConfig = null;
 
     // --- UI Configuration ---
@@ -31,7 +32,7 @@ public class AppState {
     // --- Personality Configuration ---
     // UPDATED: Path now points to the 'personalities' subfolder.
     public static final String PERSONALITIES_FOLDER = "data/personalities";
-    private static List<Personality> availablePersonalities = new ArrayList<>();
+    private static final List<Personality> availablePersonalities = new ArrayList<>();
     public static volatile Personality selectedPersonality = null;
 
     // --- Shared State ---
@@ -83,7 +84,7 @@ public class AppState {
             selectedPersonality = availablePersonalities.stream()
                     .filter(p -> "Tsundere".equalsIgnoreCase(p.getName()))
                     .findFirst()
-                    .orElse(availablePersonalities.get(0));
+                    .orElse(availablePersonalities.getFirst());
             System.out.println("Default personality set to: " + selectedPersonality.getName());
         }
     }
@@ -113,38 +114,92 @@ public class AppState {
      * Gets the current model name based on the selected mode (local or API)
      */
     public static String getCurrentModelName() {
-        if (useApiModel && systemConfig != null) {
-            return systemConfig.getModelName();
+        if (useApiAnalysis && systemConfig != null && systemConfig.getAnalysis() != null) {
+            return systemConfig.getAnalysis().getModelName();
         }
         return LANGUAGE_MODEL;
     }
 
     /**
-     * Gets the API URL for external model requests
+     * Gets the API URL for analysis model requests
      */
     public static String getApiUrl() {
-        return systemConfig != null ? systemConfig.getUrl() : null;
+        return systemConfig != null && systemConfig.getAnalysis() != null ?
+               systemConfig.getAnalysis().getUrl() : null;
     }
 
     /**
-     * Gets the API key for external model requests
+     * Gets the API key for analysis model requests
      */
     public static String getApiKey() {
-        return systemConfig != null ? systemConfig.getKey() : null;
+        return systemConfig != null && systemConfig.getAnalysis() != null ?
+               systemConfig.getAnalysis().getKey() : null;
     }
 
     /**
-     * Sets whether to use API model or local model
+     * Gets the vision API URL for vision model requests
      */
-    public static void setUseApiModel(boolean useApi) {
-        useApiModel = useApi;
-        System.out.println("Model type changed to: " + (useApi ? "API" : "Local"));
+    public static String getVisionApiUrl() {
+        return systemConfig != null && systemConfig.getVision() != null ?
+               systemConfig.getVision().getUrl() : null;
+    }
+
+    /**
+     * Gets the vision API key for vision model requests
+     */
+    public static String getVisionApiKey() {
+        return systemConfig != null && systemConfig.getVision() != null ?
+               systemConfig.getVision().getKey() : null;
+    }
+
+    /**
+     * Gets the vision model name
+     */
+    public static String getVisionModelName() {
+        return systemConfig != null && systemConfig.getVision() != null ?
+               systemConfig.getVision().getModelName() : null;
+    }
+
+    /**
+     * Sets whether to use API for vision processing
+     */
+    public static void setUseApiVision(boolean useApi) {
+        useApiVision = useApi;
+        System.out.println("Vision model changed to: " + (useApi ? "API" : "Local"));
+    }
+
+    /**
+     * Sets whether to use API for analysis processing
+     */
+    public static void setUseApiAnalysis(boolean useApi) {
+        useApiAnalysis = useApi;
+        System.out.println("Analysis model changed to: " + (useApi ? "API" : "Local"));
+    }
+
+    /**
+     * Checks if vision API configuration is available
+     */
+    public static boolean isVisionApiConfigAvailable() {
+        return systemConfig != null &&
+               systemConfig.getVision() != null &&
+               systemConfig.getVision().getKey() != null &&
+               systemConfig.getVision().getUrl() != null;
+    }
+
+    /**
+     * Checks if analysis API configuration is available
+     */
+    public static boolean isAnalysisApiConfigAvailable() {
+        return systemConfig != null &&
+               systemConfig.getAnalysis() != null &&
+               systemConfig.getAnalysis().getKey() != null &&
+               systemConfig.getAnalysis().getUrl() != null;
     }
 
     /**
      * Checks if system configuration is available for API usage
      */
     public static boolean isApiConfigAvailable() {
-        return systemConfig != null && systemConfig.getKey() != null && systemConfig.getUrl() != null;
+        return isVisionApiConfigAvailable() && isAnalysisApiConfigAvailable();
     }
 }

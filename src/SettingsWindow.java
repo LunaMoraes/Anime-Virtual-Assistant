@@ -12,7 +12,7 @@ public class SettingsWindow extends JFrame {
     public SettingsWindow(String[] voices) {
         setTitle("AI Assistant Settings");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Closing this window will exit the app
-        setSize(500, 400);
+        setSize(500, 450); // Increased height to accommodate new model sections
 
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -73,17 +73,29 @@ public class SettingsWindow extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.gridwidth = 1;
-        panel.add(new JLabel("Model Type:"), gbc);
+        panel.add(new JLabel("Vision Model:"), gbc);
 
         gbc.gridx = 1;
         gbc.gridy = 4;
         gbc.gridwidth = 1;
-        JPanel modelTypePanel = createModelTypePanel();
-        panel.add(modelTypePanel, gbc);
+        JPanel visionModelPanel = createVisionModelPanel();
+        panel.add(visionModelPanel, gbc);
+
+        // --- Analysis Model Controls ---
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 1;
+        panel.add(new JLabel("Analysis Model:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridy = 5;
+        gbc.gridwidth = 1;
+        JPanel analysisModelPanel = createAnalysisModelPanel();
+        panel.add(analysisModelPanel, gbc);
 
         // --- Start/Stop Button ---
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
@@ -102,47 +114,6 @@ public class SettingsWindow extends JFrame {
         add(panel);
         setLocationRelativeTo(null);
         setVisible(true);
-    }
-
-    private JPanel createModelTypePanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        ButtonGroup modelTypeGroup = new ButtonGroup();
-
-        JRadioButton localRadioButton = new JRadioButton("Local");
-        JRadioButton apiRadioButton = new JRadioButton("API");
-
-        modelTypeGroup.add(localRadioButton);
-        modelTypeGroup.add(apiRadioButton);
-
-        // Set initial selection based on current state
-        if (AppState.useApiModel) {
-            apiRadioButton.setSelected(true);
-        } else {
-            localRadioButton.setSelected(true);
-        }
-
-        // Disable API option if configuration is not available
-        if (!AppState.isApiConfigAvailable()) {
-            apiRadioButton.setEnabled(false);
-            apiRadioButton.setToolTipText("API configuration not available in data/system/system.json");
-        }
-
-        localRadioButton.addActionListener(e -> {
-            if (localRadioButton.isSelected()) {
-                AppState.setUseApiModel(false);
-            }
-        });
-
-        apiRadioButton.addActionListener(e -> {
-            if (apiRadioButton.isSelected()) {
-                AppState.setUseApiModel(true);
-            }
-        });
-
-        panel.add(localRadioButton);
-        panel.add(apiRadioButton);
-
-        return panel;
     }
 
     private JPanel createPersonalityPanel() {
@@ -175,6 +146,88 @@ public class SettingsWindow extends JFrame {
 
             panel.add(radioButton);
         }
+
+        return panel;
+    }
+
+    private JPanel createVisionModelPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        ButtonGroup visionModelGroup = new ButtonGroup();
+
+        JRadioButton localVisionButton = new JRadioButton("Local");
+        JRadioButton apiVisionButton = new JRadioButton("API");
+
+        visionModelGroup.add(localVisionButton);
+        visionModelGroup.add(apiVisionButton);
+
+        // Set initial selection based on current state
+        if (AppState.useApiVision) {
+            apiVisionButton.setSelected(true);
+        } else {
+            localVisionButton.setSelected(true);
+        }
+
+        // Disable API option if configuration is not available
+        if (!AppState.isVisionApiConfigAvailable()) {
+            apiVisionButton.setEnabled(false);
+            apiVisionButton.setToolTipText("Vision API configuration not available in data/system/system.json");
+        }
+
+        localVisionButton.addActionListener(e -> {
+            if (localVisionButton.isSelected()) {
+                AppState.setUseApiVision(false);
+            }
+        });
+
+        apiVisionButton.addActionListener(e -> {
+            if (apiVisionButton.isSelected()) {
+                AppState.setUseApiVision(true);
+            }
+        });
+
+        panel.add(localVisionButton);
+        panel.add(apiVisionButton);
+
+        return panel;
+    }
+
+    private JPanel createAnalysisModelPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        ButtonGroup analysisModelGroup = new ButtonGroup();
+
+        JRadioButton localAnalysisButton = new JRadioButton("Local");
+        JRadioButton apiAnalysisButton = new JRadioButton("API");
+
+        analysisModelGroup.add(localAnalysisButton);
+        analysisModelGroup.add(apiAnalysisButton);
+
+        // Set initial selection based on current state
+        if (AppState.useApiAnalysis) {
+            apiAnalysisButton.setSelected(true);
+        } else {
+            localAnalysisButton.setSelected(true);
+        }
+
+        // Disable API option if configuration is not available
+        if (!AppState.isAnalysisApiConfigAvailable()) {
+            apiAnalysisButton.setEnabled(false);
+            apiAnalysisButton.setToolTipText("Analysis API configuration not available in data/system/system.json");
+        }
+
+        localAnalysisButton.addActionListener(e -> {
+            if (localAnalysisButton.isSelected()) {
+                AppState.setUseApiAnalysis(false);
+            }
+        });
+
+        apiAnalysisButton.addActionListener(e -> {
+            if (apiAnalysisButton.isSelected()) {
+                AppState.setUseApiAnalysis(true);
+            }
+        });
+
+        panel.add(localAnalysisButton);
+        panel.add(apiAnalysisButton);
 
         return panel;
     }

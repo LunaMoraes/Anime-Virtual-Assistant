@@ -7,23 +7,18 @@ import java.io.IOException;
  * Represents the system configuration loaded from data/system/system.json
  */
 public class SystemConfig {
-    private String key;
-    private String model_name;
-    private String url;
+    private ModelConfig analysis;
+    private ModelConfig vision;
 
     // Default constructor for Gson
     public SystemConfig() {}
 
-    public String getKey() {
-        return key;
+    public ModelConfig getAnalysis() {
+        return analysis;
     }
 
-    public String getModelName() {
-        return model_name;
-    }
-
-    public String getUrl() {
-        return url;
+    public ModelConfig getVision() {
+        return vision;
     }
 
     /**
@@ -44,6 +39,29 @@ public class SystemConfig {
         } catch (IOException e) {
             System.err.println("Error loading system config: " + e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Represents a model configuration (analysis or vision)
+     */
+    public static class ModelConfig {
+        private String key;
+        private String model_name;
+        private String url;
+
+        public ModelConfig() {}
+
+        public String getKey() {
+            return key;
+        }
+
+        public String getModelName() {
+            return model_name;
+        }
+
+        public String getUrl() {
+            return url;
         }
     }
 }
