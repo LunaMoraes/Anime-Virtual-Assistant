@@ -12,7 +12,11 @@ public class Main {
     public static CharacterUI characterUI; // Add global reference to CharacterUI
 
     public static void main(String[] args) {
-        // 1. Fetch available voices from the TTS API before starting the UI.
+        // 1. Load personalities from JSON files
+        System.out.println("Loading personalities from data folder...");
+        AppState.loadPersonalities();
+
+        // 2. Fetch available voices from the TTS API before starting the UI.
         System.out.println("Fetching available TTS characters...");
         List<String> voices = TtsApiClient.getAvailableCharacters();
 
@@ -22,15 +26,15 @@ public class Main {
             return;
         }
 
-        // 2. Set the initial voice in the shared application state.
+        // 3. Set the initial voice in the shared application state.
         AppState.selectedTtsCharacterVoice = voices.get(0);
         System.out.println("TTS voices found. Default voice: " + AppState.selectedTtsCharacterVoice);
 
-        // 3. Instantiate the core logic but do not start it automatically.
+        // 4. Instantiate the core logic but do not start it automatically.
         // The Start/Stop button in the SettingsWindow will control it.
         assistantCore = new AssistantCore();
 
-        // 4. Create and show the UI components on the Swing Event Dispatch Thread.
+        // 5. Create and show the UI components on the Swing Event Dispatch Thread.
         SwingUtilities.invokeLater(() -> {
             new SettingsWindow(voices.toArray(new String[0]));
             try {

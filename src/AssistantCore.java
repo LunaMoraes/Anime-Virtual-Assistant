@@ -147,15 +147,13 @@ public class AssistantCore {
     }
 
     private String getFinalResponse(String context) throws IOException, InterruptedException {
-        String prompt = String.format(
-                "You are a sassy tsundere AI girl. Based on this screen description: \"%s\" " +
-                        "Give a SHORT, sarcastic one-liner comment (maximum 15 words). " +
-                        "Mock the user, make a pun, or tease them about what they're doing. " +
-                        "Start with 'Hmph,' 'Geez,' or 'Ugh,'. Be playful and mean but cute. " +
-                        "Examples: 'Hmph, still debugging? How... predictable.' or 'Geez, another browser tab? Multitasking much?' " +
-                        "Keep it SHORT and sassy!",
-                context.replace("\"", "'")
-        );
+        String personalityPrompt = AppState.getCurrentPersonalityPrompt();
+        if (personalityPrompt == null) {
+            System.err.println("No personality selected, using fallback prompt");
+            personalityPrompt = "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
+        }
+
+        String prompt = String.format(personalityPrompt, context.replace("\"", "'"));
         // This now only calls Ollama for the language model
         return callOllama(AppState.LANGUAGE_MODEL, prompt, null);
     }
