@@ -14,7 +14,7 @@ public class AppState {
     // --- Service URLs ---
     public static final String OLLAMA_API_URL = "http://localhost:11434/api/generate";
     public static final String VISION_API_URL = "http://localhost:5002/describe";
-    public static final String TTS_API_URL = "http://localhost:5001";
+    public static final String TTS_API_URL = "http://localhost:5005";
 
     // --- Model Configuration ---
     // The vision model is now handled by the Python service, so we only define the language model here.

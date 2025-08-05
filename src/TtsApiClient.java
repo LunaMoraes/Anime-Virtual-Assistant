@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Handles all communication with the Python TTS API server.
- * UPDATED: Now controls the character image state (speaking/static).
+ * Handles all communication with the Python VITS TTS API server.
+ * UPDATED: Now works with VITS models and supports multiple languages/characters.
  */
 public class TtsApiClient {
 
@@ -35,11 +35,13 @@ public class TtsApiClient {
 
     public static void speak(String text, String characterName, double speed, String language) {
         try {
+            // Use the characterName directly from the API (no more language mapping)
+            // The characterName now comes from the Coqui TTS API speakers list
+
             Map<String, Object> payloadMap = Map.of(
                     "text", text,
-                    "character", characterName,
-                    "speed", speed,
-                    "language", language
+                    "character", characterName,  // Use characterName directly (jenny_female, bella_female, etc.)
+                    "speed", speed
             );
             String jsonPayload = gson.toJson(payloadMap);
 

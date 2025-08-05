@@ -93,7 +93,7 @@ public class AssistantCore {
                     if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
                         System.out.println("Final response: " + rawResponse);
                         System.out.println("Speaking: " + finalResponseToSpeak);
-                        TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 0.7, AppState.selectedLanguage);
+                        TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 1.0, AppState.selectedLanguage);
 
                         // --- MEMORY UPDATE ---
                         // Save the newly generated response to the personality's memory.
@@ -254,6 +254,7 @@ public class AssistantCore {
 
         // Add the memory instruction if a previous response exists
         if (lastResponse != null && !lastResponse.isEmpty()) {
+            promptBuilder.append("Do not use special characters, formatting or emojis in your response.");
             promptBuilder.append(" Your previous comment was: \"");
             promptBuilder.append(lastResponse.replace("\"", "'"));
             promptBuilder.append("\". Your new comment MUST be different.");
