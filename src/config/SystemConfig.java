@@ -59,7 +59,7 @@ public class SystemConfig {
      */
     public static class ApiConfig {
         private String key;
-        private String modelName;
+        private String model_name;
         private String url;
 
         // Default constructor for Gson
@@ -70,7 +70,7 @@ public class SystemConfig {
         }
 
         public String getModelName() {
-            return modelName;
+            return model_name;
         }
 
         public String getUrl() {
