@@ -1,30 +1,25 @@
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import api.ApiClient;
+import api.TtsApiClient;
+import personality.PersonalityManager;
+import config.ConfigurationManager;
+
+/**
+ * Simplified AssistantCore - now only orchestrates the AI processing pipeline.
+ * Heavy lifting is delegated to specialized managers and API clients.
+ */
 public class AssistantCore {
 
     private ScheduledExecutorService scheduler;
     private final List<BufferedImage> screenshotBuffer = new ArrayList<>();
-    private final Gson gson = new Gson();
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
 
     public void startProcessing() {
@@ -81,26 +76,25 @@ public class AssistantCore {
         new Thread(() -> {
             try {
                 System.out.println("Analyzing screenshot with vision service...");
-                String imageDescription = getImageDescription(images.getFirst());
+                String imageDescription = analyzeImage(images.getFirst());
+
                 if (imageDescription == null || imageDescription.isBlank()) {
                     System.err.println("Vision service did not return a description.");
                 } else {
                     System.out.println("Vision service description: " + imageDescription);
                     System.out.println("Generating final response with language model...");
-                    String rawResponse = getFinalResponse(imageDescription);
+                    String rawResponse = generateResponse(imageDescription);
                     String finalResponseToSpeak = parseFinalResponse(rawResponse);
 
                     if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
                         System.out.println("Final response: " + rawResponse);
                         System.out.println("Speaking: " + finalResponseToSpeak);
+
+                        // Speak the response - TtsApiClient will handle UI updates automatically
                         TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 1.0, AppState.selectedLanguage);
 
-                        // --- MEMORY UPDATE ---
-                        // Save the newly generated response to the personality's memory.
-                        if (AppState.selectedPersonality != null) {
-                            AppState.selectedPersonality.setLastResponse(finalResponseToSpeak);
-                            System.out.println("Saved to memory: \"" + finalResponseToSpeak + "\"");
-                        }
+                        // Save to memory
+                        PersonalityManager.saveResponseToMemory(finalResponseToSpeak);
                     }
                 }
             } catch (Exception e) {
@@ -112,141 +106,27 @@ public class AssistantCore {
         }).start();
     }
 
-    private String parseFinalResponse(String rawResponse) {
-        if (rawResponse == null) {
-            return null;
-        }
-        int thinkTagEnd = rawResponse.lastIndexOf("</think>");
-        if (thinkTagEnd != -1) {
-            return rawResponse.substring(thinkTagEnd + "</think>".length()).trim();
-        }
-        return rawResponse.trim();
-    }
-
-    private String getImageDescription(BufferedImage image) throws IOException, InterruptedException {
-        String prompt = "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.";
-
-        if (AppState.useApiVision && AppState.getVisionApiUrl() != null) {
-            // Use external vision API
-            return callExternalVisionApi(prompt, image);
-        } else {
-            // Use local Python vision service
-            String base64Image = encodeImageToBase64(image);
-            Map<String, String> payload = Map.of("prompt", prompt, "image", base64Image);
-            String jsonPayload = gson.toJson(payload);
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(AppState.VISION_API_URL))
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(60))
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .build();
-            System.out.println("Sending request to Python vision service...");
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-                String description = jsonObject.get("description").getAsString();
-                return description.replaceAll("(?i)screenshot", "activity");
-            } else {
-                System.err.printf("Error from vision service: %d - %s%n", response.statusCode(), response.body());
-                return null;
-            }
-        }
+    /**
+     * Analyzes the given image using the appropriate vision service.
+     */
+    private String analyzeImage(BufferedImage image) throws Exception {
+        String prompt = ConfigurationManager.getVisionPrompt();
+        return ApiClient.analyzeImage(image, prompt);
     }
 
     /**
-     * Calls external vision API (Google Gemini Vision) for image analysis
+     * Generates a response based on the image description and current personality.
      */
-    private String callExternalVisionApi(String prompt, BufferedImage image) throws IOException, InterruptedException {
-        String apiUrl = AppState.getVisionApiUrl();
-        String apiKey = AppState.getVisionApiKey();
+    private String generateResponse(String context) throws Exception {
+        String personalityPrompt = PersonalityManager.getCurrentPersonalityPrompt();
 
-        if (apiUrl == null) {
-            System.err.println("Vision API URL not configured in system.json");
-            return null;
-        }
-
-        if (apiKey == null) {
-            System.err.println("Vision API key not configured in system.json");
-            return null;
-        }
-
-        System.out.println("Using Vision API: " + AppState.getVisionModelName());
-        String base64Image = encodeImageToBase64(image);
-
-        // Build the request payload for Google Gemini Vision API
-        Map<String, Object> textPart = Map.of("text", prompt);
-        Map<String, Object> imagePart = Map.of(
-            "inline_data", Map.of(
-                "mime_type", "image/jpeg",
-                "data", base64Image
-            )
-        );
-
-        Map<String, Object> content = Map.of(
-            "parts", List.of(textPart, imagePart)
-        );
-
-        Map<String, Object> payload = Map.of(
-            "contents", List.of(content),
-            "generationConfig", Map.of(
-                "temperature", 0.4,
-                "maxOutputTokens", 200
-            )
-        );
-
-        String jsonPayload = gson.toJson(payload);
-
-        try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()) {
-            String fullUrl = apiUrl + "?key=" + apiKey;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(fullUrl))
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(60))
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .build();
-
-            System.out.println("Sending vision request to: " + apiUrl);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 200) {
-                JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-                if (jsonObject.has("candidates") && !jsonObject.getAsJsonArray("candidates").isEmpty()) {
-                    JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
-                    if (candidate.has("content")) {
-                        JsonObject content2 = candidate.getAsJsonObject("content");
-                        if (content2.has("parts") && !content2.getAsJsonArray("parts").isEmpty()) {
-                            JsonObject part = content2.getAsJsonArray("parts").get(0).getAsJsonObject();
-                            if (part.has("text")) {
-                                String description = part.get("text").getAsString().trim();
-                                System.out.println("Vision API response received successfully");
-                                return description.replaceAll("(?i)screenshot", "activity");
-                            }
-                        }
-                    }
-                }
-                System.err.println("Vision API returned unexpected response format: " + response.body());
-                return null;
-            } else {
-                System.err.printf("Vision API error - Status: %d, Response: %s%n", response.statusCode(), response.body());
-                return null;
-            }
-        }
-    }
-
-    /**
-     * UPDATED: This method now appends the last response to the prompt to ensure variety.
-     */
-    private String getFinalResponse(String context) throws IOException, InterruptedException {
-        Personality currentPersonality = AppState.selectedPersonality;
-        if (currentPersonality == null) {
+        if (personalityPrompt == null) {
             System.err.println("No personality selected, using fallback prompt.");
-            String fallbackPrompt = "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
-            return callLanguageModel(String.format(fallbackPrompt, context.replace("\"", "'")));
+            String fallbackPrompt = ConfigurationManager.getFallbackPrompt();
+            return ApiClient.generateResponse(String.format(fallbackPrompt, context.replace("\"", "'")));
         }
 
-        String personalityPrompt = currentPersonality.getPrompt();
-        String lastResponse = currentPersonality.getLastResponse();
+        String lastResponse = PersonalityManager.getLastResponse();
 
         // Build the final prompt with the personality and memory context
         StringBuilder promptBuilder = new StringBuilder();
@@ -263,124 +143,20 @@ public class AssistantCore {
         String finalPrompt = promptBuilder.toString();
         System.out.println("Final prompt sent to LLM: " + finalPrompt);
 
-        return callLanguageModel(finalPrompt);
+        return ApiClient.generateResponse(finalPrompt);
     }
 
     /**
-     * Calls either the local Ollama model or the external API based on configuration
+     * Parses the final response to remove thinking tags if present.
      */
-    private String callLanguageModel(String prompt) throws IOException, InterruptedException {
-        if (AppState.useApiAnalysis && AppState.isAnalysisApiConfigAvailable()) {
-            return callExternalApi(prompt);
-        } else {
-            return callOllama(AppState.getCurrentModelName(), prompt, null);
-        }
-    }
-
-    /**
-     * Calls external API (Google Gemini) for language model inference
-     */
-    private String callExternalApi(String prompt) throws IOException, InterruptedException {
-        String apiUrl = AppState.getApiUrl();
-        String apiKey = AppState.getApiKey();
-
-        if (apiUrl == null) {
-            System.err.println("Analysis API URL not configured in system.json");
+    private String parseFinalResponse(String rawResponse) {
+        if (rawResponse == null) {
             return null;
         }
-
-        if (apiKey == null) {
-            System.err.println("Analysis API key not configured in system.json");
-            return null;
+        int thinkTagEnd = rawResponse.lastIndexOf("</think>");
+        if (thinkTagEnd != -1) {
+            return rawResponse.substring(thinkTagEnd + "</think>".length()).trim();
         }
-
-        System.out.println("Using Analysis API: " + AppState.getCurrentModelName());
-
-        // Build the request payload for Google Gemini API
-        Map<String, Object> content = Map.of(
-            "parts", List.of(Map.of("text", prompt))
-        );
-        Map<String, Object> payload = Map.of(
-            "contents", List.of(content),
-            "generationConfig", Map.of(
-                "temperature", 0.7,
-                "maxOutputTokens", 100
-            )
-        );
-
-        String jsonPayload = gson.toJson(payload);
-
-        try (HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()) {
-            String fullUrl = apiUrl + "?key=" + apiKey;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(fullUrl))
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(45))
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                    .build();
-
-            System.out.println("Sending analysis request to: " + apiUrl);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() == 200) {
-                JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-                if (jsonObject.has("candidates") && !jsonObject.getAsJsonArray("candidates").isEmpty()) {
-                    JsonObject candidate = jsonObject.getAsJsonArray("candidates").get(0).getAsJsonObject();
-                    if (candidate.has("content")) {
-                        JsonObject content2 = candidate.getAsJsonObject("content");
-                        if (content2.has("parts") && !content2.getAsJsonArray("parts").isEmpty()) {
-                            JsonObject part = content2.getAsJsonArray("parts").get(0).getAsJsonObject();
-                            if (part.has("text")) {
-                                System.out.println("Analysis API response received successfully");
-                                return part.get("text").getAsString().trim();
-                            }
-                        }
-                    }
-                }
-                System.err.println("Analysis API returned unexpected response format: " + response.body());
-                return null;
-            } else {
-                System.err.printf("Analysis API error - Status: %d, Response: %s%n", response.statusCode(), response.body());
-                return null;
-            }
-        }
-    }
-
-    private String callOllama(String model, String prompt, List<BufferedImage> images) throws IOException, InterruptedException {
-        Map<String, Object> payload = Map.of("model", model, "prompt", prompt, "stream", false);
-        String jsonPayload = gson.toJson(payload);
-        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(AppState.OLLAMA_API_URL))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(45))
-                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                .build();
-        System.out.printf("Sending request to Ollama for model: %s...%n", model);
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() == 200) {
-            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-            return jsonObject.get("response").getAsString().trim();
-        } else {
-            System.err.printf("Error from Ollama model %s: %d - %s%n", model, response.statusCode(), response.body());
-            return null;
-        }
-    }
-
-    private String encodeImageToBase64(BufferedImage image) throws IOException {
-        int maxWidth = 1280;
-        int maxHeight = 720;
-        double scale = Math.min(Math.min((double) maxWidth / image.getWidth(), (double) maxHeight / image.getHeight()), 1.0);
-        int newWidth = (int) (image.getWidth() * scale);
-        int newHeight = (int) (image.getHeight() * scale);
-        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2d = resizedImage.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2d.drawImage(image, 0, 0, newWidth, newHeight, null);
-        g2d.dispose();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(resizedImage, "jpg", baos);
-        byte[] imageBytes = baos.toByteArray();
-        return Base64.getEncoder().encodeToString(imageBytes);
+        return rawResponse.trim();
     }
 }

@@ -2,17 +2,18 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.util.List;
+import personality.Personality;
 
 /**
  * Creates the main settings window for the application.
- * This window is a standard JFrame and can be minimized.
+ * UPDATED: Now uses the new modular architecture with specialized managers.
  */
 public class SettingsWindow extends JFrame {
 
     public SettingsWindow(String[] voices) {
         setTitle("AI Assistant Settings");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // Closing this window will exit the app
-        setSize(500, 450); // Increased height to accommodate new model sections
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(500, 450);
 
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
@@ -34,6 +35,7 @@ public class SettingsWindow extends JFrame {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 AppState.selectedTtsCharacterVoice = (String) e.getItem();
                 System.out.println("Voice changed to: " + AppState.selectedTtsCharacterVoice);
+                AppState.saveCurrentSettings();
             }
         });
 
@@ -66,6 +68,7 @@ public class SettingsWindow extends JFrame {
             if (e.getStateChange() == ItemEvent.SELECTED) {
                 AppState.selectedLanguage = (String) e.getItem();
                 System.out.println("Language changed to: " + AppState.selectedLanguage);
+                AppState.saveCurrentSettings();
             }
         });
 
@@ -133,8 +136,9 @@ public class SettingsWindow extends JFrame {
             personalityGroup.add(radioButton);
 
             // Set selected if this is the current personality
-            if (AppState.selectedPersonality != null &&
-                    personality.getName().equals(AppState.selectedPersonality.getName())) {
+            Personality selectedPersonality = AppState.getSelectedPersonality();
+            if (selectedPersonality != null &&
+                    personality.getName().equals(selectedPersonality.getName())) {
                 radioButton.setSelected(true);
             }
 
@@ -161,7 +165,7 @@ public class SettingsWindow extends JFrame {
         visionModelGroup.add(apiVisionButton);
 
         // Set initial selection based on current state
-        if (AppState.useApiVision) {
+        if (AppState.useApiVision()) {
             apiVisionButton.setSelected(true);
         } else {
             localVisionButton.setSelected(true);
@@ -202,7 +206,7 @@ public class SettingsWindow extends JFrame {
         analysisModelGroup.add(apiAnalysisButton);
 
         // Set initial selection based on current state
-        if (AppState.useApiAnalysis) {
+        if (AppState.useApiAnalysis()) {
             apiAnalysisButton.setSelected(true);
         } else {
             localAnalysisButton.setSelected(true);

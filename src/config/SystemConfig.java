@@ -1,3 +1,5 @@
+package config;
+
 import com.google.gson.Gson;
 import java.io.File;
 import java.io.FileReader;
@@ -7,18 +9,23 @@ import java.io.IOException;
  * Represents the system configuration loaded from data/system/system.json
  */
 public class SystemConfig {
-    private ModelConfig analysis;
-    private ModelConfig vision;
+    private ApiConfig analysis;
+    private ApiConfig vision;
+    private PromptsConfig prompts;
 
     // Default constructor for Gson
     public SystemConfig() {}
 
-    public ModelConfig getAnalysis() {
+    public ApiConfig getAnalysis() {
         return analysis;
     }
 
-    public ModelConfig getVision() {
+    public ApiConfig getVision() {
         return vision;
+    }
+
+    public PromptsConfig getPrompts() {
+        return prompts;
     }
 
     /**
@@ -43,25 +50,47 @@ public class SystemConfig {
     }
 
     /**
-     * Represents a model configuration (analysis or vision)
+     * Represents an API configuration (analysis or vision)
      */
-    public static class ModelConfig {
+    public static class ApiConfig {
         private String key;
-        private String model_name;
+        private String modelName;
         private String url;
 
-        public ModelConfig() {}
+        // Default constructor for Gson
+        public ApiConfig() {}
 
         public String getKey() {
             return key;
         }
 
         public String getModelName() {
-            return model_name;
+            return modelName;
         }
 
         public String getUrl() {
             return url;
+        }
+    }
+
+    /**
+     * Represents prompts configuration
+     */
+    public static class PromptsConfig {
+        private String visionPrompt;
+        private String fallbackPrompt;
+
+        // Default constructor for Gson
+        public PromptsConfig() {}
+
+        public String getVisionPrompt() {
+            return visionPrompt != null ? visionPrompt :
+                "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.";
+        }
+
+        public String getFallbackPrompt() {
+            return fallbackPrompt != null ? fallbackPrompt :
+                "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
         }
     }
 }

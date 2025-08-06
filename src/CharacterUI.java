@@ -3,6 +3,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
+import personality.Personality;
 
 /**
  * Creates the always-on-top, transparent window for the assistant's image.
@@ -33,7 +34,7 @@ public class CharacterUI extends JWindow {
      * Loads the images for the currently selected personality in AppState.
      */
     public void updatePersonalityImages() {
-        Personality current = AppState.selectedPersonality;
+        Personality current = AppState.getSelectedPersonality();
         if (current == null) {
             System.err.println("Cannot update images, no personality selected.");
             return;

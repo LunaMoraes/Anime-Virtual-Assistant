@@ -1,3 +1,5 @@
+package api;
+
 import com.google.gson.Gson;
 import javax.sound.sampled.*;
 import java.io.ByteArrayInputStream;
@@ -17,11 +19,29 @@ public class TtsApiClient {
 
     private static final HttpClient client = HttpClient.newHttpClient();
     private static final Gson gson = new Gson();
+    private static final String TTS_API_URL = "http://localhost:5005";
+
+    // Interface for UI callbacks to avoid circular dependencies
+    public interface UICallback {
+        void showSpeakingImage();
+        void showSpeechBubble(String text);
+        void showStaticImage();
+        void hideSpeechBubble();
+    }
+
+    private static UICallback uiCallback = null;
+
+    /**
+     * Sets the UI callback for TTS events
+     */
+    public static void setUICallback(UICallback callback) {
+        uiCallback = callback;
+    }
 
     public static List<String> getAvailableCharacters() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(AppState.TTS_API_URL + "/characters"))
+                    .uri(URI.create(TTS_API_URL + "/characters"))
                     .GET().build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
@@ -46,7 +66,7 @@ public class TtsApiClient {
             String jsonPayload = gson.toJson(payloadMap);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(AppState.TTS_API_URL + "/synthesize"))
+                    .uri(URI.create(TTS_API_URL + "/synthesize"))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
                     .build();
@@ -54,10 +74,10 @@ public class TtsApiClient {
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
             if (response.statusCode() == 200) {
-                // Show speaking image and bubble as soon as we get a valid response
-                if (Main.characterUI != null) {
-                    Main.characterUI.showSpeakingImage();
-                    Main.characterUI.showSpeechBubble(text);
+                // Show speaking image and bubble as soon as we get a valid response (when TTS starts)
+                if (uiCallback != null) {
+                    uiCallback.showSpeakingImage();
+                    uiCallback.showSpeechBubble(text);
                 }
 
                 byte[] audioBytes = response.body().readAllBytes();
@@ -81,10 +101,10 @@ public class TtsApiClient {
 
                         clip.addLineListener(event -> {
                             if (event.getType() == LineEvent.Type.STOP) {
-                                // Revert to static image and hide bubble when done
-                                if (Main.characterUI != null) {
-                                    Main.characterUI.showStaticImage();
-                                    Main.characterUI.hideSpeechBubble();
+                                // Revert to static image and hide bubble when TTS finishes
+                                if (uiCallback != null) {
+                                    uiCallback.showStaticImage();
+                                    uiCallback.hideSpeechBubble();
                                 }
                                 synchronized (lock) {
                                     lock.notify();
@@ -103,18 +123,18 @@ public class TtsApiClient {
             } else {
                 System.err.println("TTS request failed with status: " + response.statusCode());
                 // Ensure UI resets on failure
-                if (Main.characterUI != null) {
-                    Main.characterUI.showStaticImage();
-                    Main.characterUI.hideSpeechBubble();
+                if (uiCallback != null) {
+                    uiCallback.showStaticImage();
+                    uiCallback.hideSpeechBubble();
                 }
             }
         } catch (Exception e) {
             System.err.println("Error during TTS playback: " + e.getMessage());
             e.printStackTrace();
             // Ensure UI resets on error
-            if (Main.characterUI != null) {
-                Main.characterUI.showStaticImage();
-                Main.characterUI.hideSpeechBubble();
+            if (uiCallback != null) {
+                uiCallback.showStaticImage();
+                uiCallback.hideSpeechBubble();
             }
         }
     }
