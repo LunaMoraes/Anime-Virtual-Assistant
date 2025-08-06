@@ -75,27 +75,38 @@ public class AssistantCore {
 
         new Thread(() -> {
             try {
-                System.out.println("Analyzing screenshot with vision service...");
-                String imageDescription = analyzeImage(images.getFirst());
-
-                if (imageDescription == null || imageDescription.isBlank()) {
-                    System.err.println("Vision service did not return a description.");
+                String finalResponseToSpeak;
+                
+                // Check if we're using multimodal mode
+                if (AppState.useMultimodal()) {
+                    System.out.println("Using multimodal mode - single request");
+                    String rawResponse = processMultimodal(images.getFirst());
+                    finalResponseToSpeak = parseFinalResponse(rawResponse);
                 } else {
-                    System.out.println("Vision service description: " + imageDescription);
-                    System.out.println("Generating final response with language model...");
-                    String rawResponse = generateResponse(imageDescription);
-                    String finalResponseToSpeak = parseFinalResponse(rawResponse);
+                    System.out.println("Using traditional mode - separate vision and analysis requests");
+                    System.out.println("Analyzing screenshot with vision service...");
+                    String imageDescription = analyzeImage(images.getFirst());
 
-                    if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
-                        System.out.println("Final response: " + rawResponse);
-                        System.out.println("Speaking: " + finalResponseToSpeak);
-
-                        // Speak the response - TtsApiClient will handle UI updates automatically
-                        TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 1.0, AppState.selectedLanguage);
-
-                        // Save to memory
-                        PersonalityManager.saveResponseToMemory(finalResponseToSpeak);
+                    if (imageDescription == null || imageDescription.isBlank()) {
+                        System.err.println("Vision service did not return a description.");
+                        return;
+                    } else {
+                        System.out.println("Vision service description: " + imageDescription);
+                        System.out.println("Generating final response with language model...");
+                        String rawResponse = generateResponse(imageDescription);
+                        finalResponseToSpeak = parseFinalResponse(rawResponse);
                     }
+                }
+
+                if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
+                    System.out.println("Final response: " + finalResponseToSpeak);
+                    System.out.println("Speaking: " + finalResponseToSpeak);
+
+                    // Speak the response - TtsApiClient will handle UI updates automatically
+                    TtsApiClient.speak(finalResponseToSpeak, AppState.selectedTtsCharacterVoice, 1.0, AppState.selectedLanguage);
+
+                    // Save to memory
+                    PersonalityManager.saveResponseToMemory(finalResponseToSpeak);
                 }
             } catch (Exception e) {
                 System.err.println("An error occurred during AI processing: " + e.getMessage());
@@ -158,5 +169,39 @@ public class AssistantCore {
             return rawResponse.substring(thinkTagEnd + "</think>".length()).trim();
         }
         return rawResponse.trim();
+    }
+
+    /**
+     * Processes the image using multimodal mode - combines image analysis and personality response in one request.
+     */
+    private String processMultimodal(BufferedImage image) throws Exception {
+        String personalityPrompt = PersonalityManager.getCurrentMultimodalPrompt();
+        
+        System.out.println("DEBUG: Multimodal prompt from personality: " + personalityPrompt);
+
+        if (personalityPrompt == null || personalityPrompt.trim().isEmpty()) {
+            System.err.println("No multimodal personality prompt found, falling back to traditional mode.");
+            String imageDescription = analyzeImage(image);
+            return generateResponse(imageDescription);
+        }
+
+        String lastResponse = PersonalityManager.getLastResponse();
+
+        // Build the final multimodal prompt with personality and memory context
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append(personalityPrompt);
+
+        // Add the memory instruction if a previous response exists
+        if (lastResponse != null && !lastResponse.isEmpty()) {
+            promptBuilder.append(" Do not use special characters, formatting or emojis in your response.");
+            promptBuilder.append(" Your previous comment was: \"");
+            promptBuilder.append(lastResponse.replace("\"", "'"));
+            promptBuilder.append("\". Your new comment MUST be different.");
+        }
+
+        String finalPrompt = promptBuilder.toString();
+        System.out.println("Final multimodal prompt sent: " + finalPrompt);
+
+        return ApiClient.analyzeImageMultimodal(image, finalPrompt);
     }
 }

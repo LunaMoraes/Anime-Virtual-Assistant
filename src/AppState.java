@@ -13,7 +13,7 @@ public class AppState {
     public static volatile boolean isRunning = false;
 
     // --- UI Configuration ---
-    public static final String FALLBACK_IMAGE_URL = "src/pngegg.png";
+    public static final String FALLBACK_IMAGE_URL = "";
 
     // --- Current Settings (delegated to ConfigurationManager) ---
     public static volatile String selectedTtsCharacterVoice = null;
@@ -87,6 +87,10 @@ public class AppState {
         return ConfigurationManager.isAnalysisApiAvailable();
     }
 
+    public static boolean isMultimodalApiConfigAvailable() {
+        return ConfigurationManager.isMultimodalApiAvailable();
+    }
+
     public static void setUseApiVision(boolean useApi) {
         ConfigurationManager.setUseApiVision(useApi);
         System.out.println("Vision model changed to: " + (useApi ? "API" : "Local"));
@@ -97,11 +101,29 @@ public class AppState {
         System.out.println("Analysis model changed to: " + (useApi ? "API" : "Local"));
     }
 
+    public static void setUseMultimodal(boolean useMultimodal) {
+        ConfigurationManager.setUseMultimodal(useMultimodal);
+        System.out.println("Multimodal mode changed to: " + (useMultimodal ? "Enabled" : "Disabled"));
+    }
+
+    public static void setUseApiMultimodal(boolean useApi) {
+        ConfigurationManager.setUseApiMultimodal(useApi);
+        System.out.println("Multimodal model changed to: " + (useApi ? "API" : "Local"));
+    }
+
     public static boolean useApiVision() {
         return ConfigurationManager.useApiVision();
     }
 
     public static boolean useApiAnalysis() {
         return ConfigurationManager.useApiAnalysis();
+    }
+
+    public static boolean useMultimodal() {
+        return ConfigurationManager.useMultimodal();
+    }
+
+    public static boolean useApiMultimodal() {
+        return ConfigurationManager.useApiMultimodal();
     }
 }

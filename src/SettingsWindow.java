@@ -229,14 +229,25 @@ public class SettingsWindow extends JFrame {
         settingsTab.add(languageSection);
         settingsTab.add(Box.createVerticalStrut(20));
 
-        // Vision Model section
-        JPanel visionSection = createSection("Vision Model", createVisionModelPanel());
-        settingsTab.add(visionSection);
+        // Multimodal section
+        JPanel multimodalSection = createSection("Multimodal Model", createMultimodalPanel());
+        settingsTab.add(multimodalSection);
         settingsTab.add(Box.createVerticalStrut(20));
 
-        // Analysis Model section
-        JPanel analysisSection = createSection("Analysis Model", createAnalysisModelPanel());
-        settingsTab.add(analysisSection);
+        // Conditional sections based on multimodal mode
+        if (AppState.useMultimodal()) {
+            // Show unified Model Settings section
+            JPanel modelSection = createSection("Model Settings", createUnifiedModelPanel());
+            settingsTab.add(modelSection);
+        } else {
+            // Show separate Vision and Analysis sections
+            JPanel visionSection = createSection("Vision Model", createVisionModelPanel());
+            settingsTab.add(visionSection);
+            settingsTab.add(Box.createVerticalStrut(20));
+
+            JPanel analysisSection = createSection("Analysis Model", createAnalysisModelPanel());
+            settingsTab.add(analysisSection);
+        }
 
         // Add flexible space at the bottom
         settingsTab.add(Box.createVerticalGlue());
@@ -527,5 +538,128 @@ public class SettingsWindow extends JFrame {
 
         controlPanel.add(startStopButton);
         return controlPanel;
+    }
+
+    private JPanel createMultimodalPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setOpaque(false); // Transparent to match section
+
+        ButtonGroup multimodalGroup = new ButtonGroup();
+
+        JRadioButton enabledButton = new JRadioButton("Yes");
+        JRadioButton disabledButton = new JRadioButton("No");
+
+        enabledButton.setOpaque(false);
+        enabledButton.setForeground(Color.WHITE);
+        disabledButton.setOpaque(false);
+        disabledButton.setForeground(Color.WHITE);
+
+        multimodalGroup.add(enabledButton);
+        multimodalGroup.add(disabledButton);
+
+        // Set initial selection based on current state
+        if (AppState.useMultimodal()) {
+            enabledButton.setSelected(true);
+        } else {
+            disabledButton.setSelected(true);
+        }
+
+        // Disable if configuration is not available
+        if (!AppState.isMultimodalApiConfigAvailable()) {
+            enabledButton.setEnabled(false);
+            enabledButton.setToolTipText("Multimodal API configuration not available in data/system/system.json");
+        }
+
+        enabledButton.addActionListener(e -> {
+            if (enabledButton.isSelected()) {
+                AppState.setUseMultimodal(true);
+                refreshSettingsTab();
+            }
+        });
+
+        disabledButton.addActionListener(e -> {
+            if (disabledButton.isSelected()) {
+                AppState.setUseMultimodal(false);
+                refreshSettingsTab();
+            }
+        });
+
+        panel.add(disabledButton);
+        panel.add(enabledButton);
+
+        return panel;
+    }
+
+    private JPanel createUnifiedModelPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setOpaque(false); // Transparent to match section
+
+        ButtonGroup modelGroup = new ButtonGroup();
+
+        JRadioButton localButton = new JRadioButton("Local");
+        JRadioButton apiButton = new JRadioButton("API");
+
+        localButton.setOpaque(false);
+        localButton.setForeground(Color.WHITE);
+        apiButton.setOpaque(false);
+        apiButton.setForeground(Color.WHITE);
+
+        modelGroup.add(localButton);
+        modelGroup.add(apiButton);
+
+        // Set initial selection based on current state
+        if (AppState.useApiMultimodal()) {
+            apiButton.setSelected(true);
+        } else {
+            localButton.setSelected(true);
+        }
+
+        // Disable API option if configuration is not available
+        if (!AppState.isMultimodalApiConfigAvailable()) {
+            apiButton.setEnabled(false);
+            apiButton.setToolTipText("Multimodal API configuration not available in data/system/system.json");
+        }
+
+        localButton.addActionListener(e -> {
+            if (localButton.isSelected()) {
+                AppState.setUseApiMultimodal(false);
+            }
+        });
+
+        apiButton.addActionListener(e -> {
+            if (apiButton.isSelected()) {
+                AppState.setUseApiMultimodal(true);
+            }
+        });
+
+        panel.add(localButton);
+        panel.add(apiButton);
+
+        return panel;
+    }
+
+    private void refreshSettingsTab() {
+        // Find the tabbed pane and refresh the settings tab
+        Container parent = this.getContentPane();
+        JTabbedPane tabbedPane = findTabbedPane(parent);
+        if (tabbedPane != null) {
+            // Recreate the settings tab
+            JPanel newSettingsTab = createSettingsTab();
+            tabbedPane.setComponentAt(1, newSettingsTab); // Settings tab is at index 1
+            tabbedPane.revalidate();
+            tabbedPane.repaint();
+        }
+    }
+
+    private JTabbedPane findTabbedPane(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JTabbedPane) {
+                return (JTabbedPane) component;
+            } else if (component instanceof Container) {
+                JTabbedPane found = findTabbedPane((Container) component);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 }

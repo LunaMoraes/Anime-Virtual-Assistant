@@ -112,6 +112,13 @@ public class PersonalityManager {
     }
 
     /**
+     * Gets the current personality's multimodal prompt for single-request processing.
+     */
+    public static String getCurrentMultimodalPrompt() {
+        return selectedPersonality != null ? selectedPersonality.getMultimodalPrompt() : null;
+    }
+
+    /**
      * Gets the last response from the selected personality for memory purposes.
      */
     public static String getLastResponse() {

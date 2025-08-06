@@ -11,6 +11,7 @@ import java.io.IOException;
 public class SystemConfig {
     private ApiConfig analysis;
     private ApiConfig vision;
+    private ApiConfig multimodal;
     private PromptsConfig prompts;
 
     // Default constructor for Gson
@@ -22,6 +23,10 @@ public class SystemConfig {
 
     public ApiConfig getVision() {
         return vision;
+    }
+
+    public ApiConfig getMultimodal() {
+        return multimodal;
     }
 
     public PromptsConfig getPrompts() {
@@ -79,6 +84,7 @@ public class SystemConfig {
     public static class PromptsConfig {
         private String visionPrompt;
         private String fallbackPrompt;
+        private String multimodalPrompt;
 
         // Default constructor for Gson
         public PromptsConfig() {}
@@ -91,6 +97,11 @@ public class SystemConfig {
         public String getFallbackPrompt() {
             return fallbackPrompt != null ? fallbackPrompt :
                 "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
+        }
+
+        public String getMultimodalPrompt() {
+            return multimodalPrompt != null ? multimodalPrompt :
+                "The attached screenshot shows a user activity, based on this and the later on personality quote give a response to the user.";
         }
     }
 }

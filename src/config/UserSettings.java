@@ -17,6 +17,8 @@ public class UserSettings {
     private String selectedPersonalityName = "Tsundere";
     private boolean useApiVision = true;
     private boolean useApiAnalysis = true;
+    private boolean useMultimodal = true;
+    private boolean useApiMultimodal = true;
 
     // Default constructor
     public UserSettings() {}
@@ -106,5 +108,21 @@ public class UserSettings {
 
     public void setUseApiAnalysis(boolean useApiAnalysis) {
         this.useApiAnalysis = useApiAnalysis;
+    }
+
+    public boolean isUseMultimodal() {
+        return useMultimodal;
+    }
+
+    public void setUseMultimodal(boolean useMultimodal) {
+        this.useMultimodal = useMultimodal;
+    }
+
+    public boolean isUseApiMultimodal() {
+        return useApiMultimodal;
+    }
+
+    public void setUseApiMultimodal(boolean useApiMultimodal) {
+        this.useApiMultimodal = useApiMultimodal;
     }
 }

@@ -62,6 +62,13 @@ public class ConfigurationManager {
     }
 
     /**
+     * Gets the multimodal API configuration
+     */
+    public static SystemConfig.ApiConfig getMultimodalApiConfig() {
+        return systemConfig != null ? systemConfig.getMultimodal() : null;
+    }
+
+    /**
      * Checks if vision API configuration is available
      */
     public static boolean isVisionApiAvailable() {
@@ -75,6 +82,21 @@ public class ConfigurationManager {
     public static boolean isAnalysisApiAvailable() {
         SystemConfig.ApiConfig analysis = getAnalysisApiConfig();
         return analysis != null && analysis.getKey() != null && analysis.getUrl() != null;
+    }
+
+    /**
+     * Checks if multimodal API configuration is available
+     */
+    public static boolean isMultimodalApiConfigAvailable() {
+        SystemConfig.ApiConfig multimodal = getMultimodalApiConfig();
+        return multimodal != null && multimodal.getKey() != null && multimodal.getUrl() != null;
+    }
+
+    /**
+     * Checks if multimodal API configuration is available (alias for consistency)
+     */
+    public static boolean isMultimodalApiAvailable() {
+        return isMultimodalApiConfigAvailable();
     }
 
     // === User Settings Access ===
@@ -101,6 +123,14 @@ public class ConfigurationManager {
 
     public static boolean useApiAnalysis() {
         return userSettings != null && userSettings.isUseApiAnalysis();
+    }
+
+    public static boolean useMultimodal() {
+        return userSettings != null && userSettings.isUseMultimodal();
+    }
+
+    public static boolean useApiMultimodal() {
+        return userSettings != null && userSettings.isUseApiMultimodal();
     }
 
     // === User Settings Updates ===
@@ -140,6 +170,20 @@ public class ConfigurationManager {
         }
     }
 
+    public static void setUseMultimodal(boolean useMultimodal) {
+        if (userSettings != null) {
+            userSettings.setUseMultimodal(useMultimodal);
+            saveUserSettings();
+        }
+    }
+
+    public static void setUseApiMultimodal(boolean useApi) {
+        if (userSettings != null) {
+            userSettings.setUseApiMultimodal(useApi);
+            saveUserSettings();
+        }
+    }
+
     /**
      * Gets the vision prompt from system configuration
      */
@@ -156,5 +200,14 @@ public class ConfigurationManager {
         return systemConfig != null && systemConfig.getPrompts() != null ?
                systemConfig.getPrompts().getFallbackPrompt() :
                "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
+    }
+
+    /**
+     * Gets the multimodal prompt from system configuration
+     */
+    public static String getMultimodalPrompt() {
+        return systemConfig != null && systemConfig.getPrompts() != null ?
+               systemConfig.getPrompts().getMultimodalPrompt() :
+               "The attached screenshot shows a user activity, based on this and the later on personality quote give a response to the user.";
     }
 }
