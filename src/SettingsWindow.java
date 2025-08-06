@@ -173,13 +173,42 @@ public class SettingsWindow extends JFrame {
         // Add flexible space at the bottom
         mainTab.add(Box.createVerticalGlue());
 
-        // Wrap in scroll pane
+        // Wrap in scroll pane with improved sensitivity
         JScrollPane scrollPane = new JScrollPane(mainTab);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(null);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        // Increase scroll sensitivity significantly
+        scrollPane.getVerticalScrollBar().setUnitIncrement(20); // Increased from default 1
+        scrollPane.getVerticalScrollBar().setBlockIncrement(80); // Increased from default 10
+
+        // Custom scrollbar styling
+        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = new Color(200, 100, 200, 150); // Pink semi-transparent thumb
+                this.trackColor = new Color(40, 40, 40, 100); // Dark semi-transparent track
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                JButton button = super.createDecreaseButton(orientation);
+                button.setBackground(new Color(150, 100, 200, 100));
+                button.setBorder(null);
+                return button;
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                JButton button = super.createIncreaseButton(orientation);
+                button.setBackground(new Color(150, 100, 200, 100));
+                button.setBorder(null);
+                return button;
+            }
+        });
 
         // Create wrapper panel to return
         JPanel wrapper = new JPanel(new BorderLayout());
@@ -212,13 +241,42 @@ public class SettingsWindow extends JFrame {
         // Add flexible space at the bottom
         settingsTab.add(Box.createVerticalGlue());
 
-        // Wrap in scroll pane
+        // Wrap in scroll pane with improved sensitivity
         JScrollPane scrollPane = new JScrollPane(settingsTab);
         scrollPane.setOpaque(false);
         scrollPane.getViewport().setOpaque(false);
         scrollPane.setBorder(null);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        // Increase scroll sensitivity significantly
+        scrollPane.getVerticalScrollBar().setUnitIncrement(20); // Increased from default 1
+        scrollPane.getVerticalScrollBar().setBlockIncrement(80); // Increased from default 10
+
+        // Custom scrollbar styling
+        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = new Color(200, 100, 200, 150); // Pink semi-transparent thumb
+                this.trackColor = new Color(40, 40, 40, 100); // Dark semi-transparent track
+            }
+
+            @Override
+            protected JButton createDecreaseButton(int orientation) {
+                JButton button = super.createDecreaseButton(orientation);
+                button.setBackground(new Color(150, 100, 200, 100));
+                button.setBorder(null);
+                return button;
+            }
+
+            @Override
+            protected JButton createIncreaseButton(int orientation) {
+                JButton button = super.createIncreaseButton(orientation);
+                button.setBackground(new Color(150, 100, 200, 100));
+                button.setBorder(null);
+                return button;
+            }
+        });
 
         // Create wrapper panel to return
         JPanel wrapper = new JPanel(new BorderLayout());
@@ -436,23 +494,24 @@ public class SettingsWindow extends JFrame {
         startStopButton.setPreferredSize(new Dimension(150, 35));
         startStopButton.setFont(new Font("Arial", Font.BOLD, 12));
 
-        // Dark mode styling with pink/purple theme
-        startStopButton.setBackground(new Color(50, 50, 50)); // Dark background
-        startStopButton.setForeground(Color.WHITE); // White text
+        // Transparent background with pink text and border
+        startStopButton.setOpaque(false);
+        startStopButton.setContentAreaFilled(false);
+        startStopButton.setForeground(new Color(200, 100, 200)); // Pink text color matching theme
         startStopButton.setFocusPainted(false);
-        startStopButton.setBorder(BorderFactory.createLineBorder(new Color(200, 100, 200), 2)); // Pink/purple border
+        startStopButton.setBorder(BorderFactory.createLineBorder(new Color(200, 100, 200), 2)); // Pink border
 
         // Add hover effect
         startStopButton.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                startStopButton.setBackground(new Color(70, 50, 70)); // Slightly lighter on hover
+                // Brighter pink on hover
+                startStopButton.setForeground(new Color(220, 120, 220));
+                startStopButton.setBorder(BorderFactory.createLineBorder(new Color(220, 120, 220), 2));
             }
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                if (AppState.isRunning) {
-                    startStopButton.setBackground(new Color(80, 30, 60)); // Dark red when running
-                } else {
-                    startStopButton.setBackground(new Color(50, 50, 50)); // Original dark
-                }
+                // Return to original pink color
+                startStopButton.setForeground(new Color(200, 100, 200));
+                startStopButton.setBorder(BorderFactory.createLineBorder(new Color(200, 100, 200), 2));
             }
         });
 
@@ -460,13 +519,9 @@ public class SettingsWindow extends JFrame {
             if (AppState.isRunning) {
                 Main.assistantCore.stopProcessing();
                 startStopButton.setText("Start Assistant");
-                startStopButton.setBackground(new Color(50, 50, 50)); // Dark background
-                startStopButton.setBorder(BorderFactory.createLineBorder(new Color(200, 100, 200), 2)); // Pink border
             } else {
                 Main.assistantCore.startProcessing();
                 startStopButton.setText("Stop Assistant");
-                startStopButton.setBackground(new Color(80, 30, 60)); // Dark red when active
-                startStopButton.setBorder(BorderFactory.createLineBorder(new Color(220, 80, 120), 2)); // Brighter pink when active
             }
         });
 
