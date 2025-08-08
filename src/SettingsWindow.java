@@ -42,6 +42,28 @@ public class SettingsWindow extends JFrame {
         mainPanel.add(titlePanel, BorderLayout.NORTH);
 
         // Tabbed pane for different sections
+        JTabbedPane tabbedPane = getJTabbedPane();
+
+        // Main tab - Voice and Personality
+        JPanel mainTab = createMainTab(voices);
+        tabbedPane.addTab("Main", new ImageIcon(), mainTab, "Voice and Personality settings");
+
+        // Settings tab - Advanced options
+        JPanel settingsTab = createSettingsTab();
+        tabbedPane.addTab("Settings", new ImageIcon(), settingsTab, "Advanced model settings");
+
+        mainPanel.add(tabbedPane, BorderLayout.CENTER);
+
+        // Control panel with start/stop button
+        JPanel controlPanel = createControlPanel();
+        mainPanel.add(controlPanel, BorderLayout.SOUTH);
+
+        add(mainPanel);
+        setLocationRelativeTo(null);
+        setVisible(true);
+    }
+
+    private static JTabbedPane getJTabbedPane() {
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Arial", Font.BOLD, 12));
         tabbedPane.setOpaque(false); // Make transparent to show background
@@ -75,24 +97,7 @@ public class SettingsWindow extends JFrame {
                 g2d.dispose();
             }
         });
-
-        // Main tab - Voice and Personality
-        JPanel mainTab = createMainTab(voices);
-        tabbedPane.addTab("Main", new ImageIcon(), mainTab, "Voice and Personality settings");
-
-        // Settings tab - Advanced options
-        JPanel settingsTab = createSettingsTab();
-        tabbedPane.addTab("Settings", new ImageIcon(), settingsTab, "Advanced model settings");
-
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-
-        // Control panel with start/stop button
-        JPanel controlPanel = createControlPanel();
-        mainPanel.add(controlPanel, BorderLayout.SOUTH);
-
-        add(mainPanel);
-        setLocationRelativeTo(null);
-        setVisible(true);
+        return tabbedPane;
     }
 
     private void loadBackgroundImage() {
@@ -542,7 +547,7 @@ public class SettingsWindow extends JFrame {
                         if (voices != null && !voices.isEmpty()) {
                             // Update voice selection if needed
                             if (AppState.selectedTtsCharacterVoice == null) {
-                                AppState.selectedTtsCharacterVoice = voices.get(0);
+                                AppState.selectedTtsCharacterVoice = voices.getFirst();
                                 AppState.saveCurrentSettings();
                             }
                             // Update the voice selector in the UI
@@ -693,30 +698,6 @@ public class SettingsWindow extends JFrame {
                 return (JTabbedPane) component;
             } else if (component instanceof Container) {
                 JTabbedPane found = findTabbedPane((Container) component);
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-
-
-    private void updateStartButtonText(String text) {
-        // Find the start button and update its text
-        Component startButton = findStartButton(this.getContentPane());
-        if (startButton instanceof JButton) {
-            ((JButton) startButton).setText(text);
-        }
-    }
-
-    private Component findStartButton(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JButton) {
-                JButton button = (JButton) component;
-                if (button.getText().contains("Assistant")) {
-                    return button;
-                }
-            } else if (component instanceof Container) {
-                Component found = findStartButton((Container) component);
                 if (found != null) return found;
             }
         }

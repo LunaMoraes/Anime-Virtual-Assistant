@@ -1,8 +1,6 @@
 package config;
 
 import com.google.gson.Gson;
-import java.io.FileReader;
-import java.io.IOException;
 
 /**
  * Manages all configuration loading and access for the application.

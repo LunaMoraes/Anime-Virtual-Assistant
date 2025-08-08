@@ -6,9 +6,7 @@ import java.awt.geom.RoundRectangle2D;
  * A speech bubble that appears above the character during TTS playback.
  */
 public class SpeechBubble extends JWindow {
-    private String text;
-    private final int maxWidth = 300;
-    private final int padding = 15;
+    private final String text;
     private final int arcSize = 20;
 
     public SpeechBubble(String text) {
@@ -53,6 +51,8 @@ public class SpeechBubble extends JWindow {
         bubblePanel.setLayout(new BorderLayout());
 
         // Create text label with word wrapping
+        int padding = 15;
+        int maxWidth = 300;
         JLabel textLabel = new JLabel("<html><div style='text-align: center; width: " + (maxWidth - 2 * padding) + "px;'>" + text + "</div></html>");
         textLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         textLabel.setForeground(Color.BLACK);

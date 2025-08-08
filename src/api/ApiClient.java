@@ -109,25 +109,7 @@ public class ApiClient {
         String base64Image = encodeImageToBase64(image);
 
         // Build the request payload for Google Gemini Vision API
-        Map<String, Object> textPart = Map.of("text", prompt);
-        Map<String, Object> imagePart = Map.of(
-            "inline_data", Map.of(
-                "mime_type", "image/jpeg",
-                "data", base64Image
-            )
-        );
-
-        Map<String, Object> content = Map.of(
-            "parts", List.of(textPart, imagePart)
-        );
-
-        Map<String, Object> payload = Map.of(
-            "contents", List.of(content),
-            "generationConfig", Map.of(
-                "temperature", 0.4,
-                "maxOutputTokens", 200
-            )
-        );
+        Map<String, Object> payload = getStringObjectMap(prompt, base64Image);
 
         String jsonPayload = gson.toJson(payload);
         String fullUrl = visionConfig.getUrl() + "?key=" + visionConfig.getKey();
@@ -148,6 +130,28 @@ public class ApiClient {
             System.err.printf("Vision API error - Status: %d, Response: %s%n", response.statusCode(), response.body());
             return null;
         }
+    }
+
+    private static Map<String, Object> getStringObjectMap(String prompt, String base64Image) {
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> imagePart = Map.of(
+            "inline_data", Map.of(
+                "mime_type", "image/jpeg",
+                "data", base64Image
+            )
+        );
+
+        Map<String, Object> content = Map.of(
+            "parts", List.of(textPart, imagePart)
+        );
+
+        return Map.of(
+            "contents", List.of(content),
+            "generationConfig", Map.of(
+                "temperature", 0.4,
+                "maxOutputTokens", 200
+            )
+        );
     }
 
     // === Language Model API Methods ===
@@ -257,25 +261,7 @@ public class ApiClient {
         String base64Image = encodeImageToBase64(image);
 
         // Build the request payload for Google Gemini Multimodal API
-        Map<String, Object> textPart = Map.of("text", prompt);
-        Map<String, Object> imagePart = Map.of(
-            "inline_data", Map.of(
-                "mime_type", "image/jpeg",
-                "data", base64Image
-            )
-        );
-
-        Map<String, Object> content = Map.of(
-            "parts", List.of(textPart, imagePart)
-        );
-
-        Map<String, Object> payload = Map.of(
-            "contents", List.of(content),
-            "generationConfig", Map.of(
-                "temperature", 0.7,
-                "maxOutputTokens", 150
-            )
-        );
+        Map<String, Object> payload = getObjectMap(prompt, base64Image);
 
         String jsonPayload = gson.toJson(payload);
         String fullUrl = multimodalConfig.getUrl() + "?key=" + multimodalConfig.getKey();
@@ -296,6 +282,28 @@ public class ApiClient {
             System.err.printf("Multimodal API error - Status: %d, Response: %s%n", response.statusCode(), response.body());
             return null;
         }
+    }
+
+    private static Map<String, Object> getObjectMap(String prompt, String base64Image) {
+        Map<String, Object> textPart = Map.of("text", prompt);
+        Map<String, Object> imagePart = Map.of(
+            "inline_data", Map.of(
+                "mime_type", "image/jpeg",
+                "data", base64Image
+            )
+        );
+
+        Map<String, Object> content = Map.of(
+            "parts", List.of(textPart, imagePart)
+        );
+
+        return Map.of(
+            "contents", List.of(content),
+            "generationConfig", Map.of(
+                "temperature", 0.7,
+                "maxOutputTokens", 150
+            )
+        );
     }
 
     /**

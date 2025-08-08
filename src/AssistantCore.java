@@ -137,6 +137,13 @@ public class AssistantCore {
             return ApiClient.generateResponse(String.format(fallbackPrompt, context.replace("\"", "'")));
         }
 
+        String finalPrompt = getString(context, personalityPrompt);
+        System.out.println("Final prompt sent to LLM: " + finalPrompt);
+
+        return ApiClient.generateResponse(finalPrompt);
+    }
+
+    private static String getString(String context, String personalityPrompt) {
         String lastResponse = PersonalityManager.getLastResponse();
 
         // Build the final prompt with the personality and memory context
@@ -151,10 +158,7 @@ public class AssistantCore {
             promptBuilder.append("\". Your new comment MUST be different.");
         }
 
-        String finalPrompt = promptBuilder.toString();
-        System.out.println("Final prompt sent to LLM: " + finalPrompt);
-
-        return ApiClient.generateResponse(finalPrompt);
+        return promptBuilder.toString();
     }
 
     /**
@@ -185,6 +189,13 @@ public class AssistantCore {
             return generateResponse(imageDescription);
         }
 
+        String finalPrompt = getFinalPrompt(personalityPrompt);
+        System.out.println("Final multimodal prompt sent: " + finalPrompt);
+
+        return ApiClient.analyzeImageMultimodal(image, finalPrompt);
+    }
+
+    private static String getFinalPrompt(String personalityPrompt) {
         String lastResponse = PersonalityManager.getLastResponse();
 
         // Build the final multimodal prompt with personality and memory context
@@ -199,9 +210,6 @@ public class AssistantCore {
             promptBuilder.append("\". Your new comment MUST be different.");
         }
 
-        String finalPrompt = promptBuilder.toString();
-        System.out.println("Final multimodal prompt sent: " + finalPrompt);
-
-        return ApiClient.analyzeImageMultimodal(image, finalPrompt);
+        return promptBuilder.toString();
     }
 }

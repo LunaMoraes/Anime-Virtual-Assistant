@@ -92,7 +92,7 @@ public class PersonalityManager {
             selectedPersonality = availablePersonalities.stream()
                     .filter(p -> "Tsundere".equalsIgnoreCase(p.getName()))
                     .findFirst()
-                    .orElse(availablePersonalities.get(0));
+                    .orElse(availablePersonalities.getFirst());
             System.out.println("Default personality set to: " + selectedPersonality.getName());
         }
     }

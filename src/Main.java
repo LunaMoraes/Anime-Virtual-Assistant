@@ -35,8 +35,8 @@ public class Main {
         } else {
             AppState.isTtsApiAvailable = true;
             // Set default voice if none was loaded from settings
-            if (AppState.selectedTtsCharacterVoice == null && !voices.isEmpty()) {
-                AppState.selectedTtsCharacterVoice = voices.get(0);
+            if (AppState.selectedTtsCharacterVoice == null) {
+                AppState.selectedTtsCharacterVoice = voices.getFirst();
                 AppState.saveCurrentSettings();
             }
             System.out.println("TTS voices found. Selected voice: " + AppState.selectedTtsCharacterVoice);

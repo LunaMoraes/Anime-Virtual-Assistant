@@ -74,10 +74,6 @@ public class AppState {
         return PersonalityManager.getSelectedPersonality();
     }
 
-    public static String getCurrentPersonalityPrompt() {
-        return PersonalityManager.getCurrentPersonalityPrompt();
-    }
-
     // === Configuration Delegation Methods ===
 
     public static boolean isVisionApiConfigAvailable() {
