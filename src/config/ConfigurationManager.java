@@ -1,6 +1,5 @@
 package config;
 
-import com.google.gson.Gson;
 
 /**
  * Manages all configuration loading and access for the application.
@@ -9,7 +8,6 @@ import com.google.gson.Gson;
 public class ConfigurationManager {
     private static SystemConfig systemConfig = null;
     private static UserSettings userSettings = null;
-    private static final Gson gson = new Gson();
 
     /**
      * Initializes all configuration files.

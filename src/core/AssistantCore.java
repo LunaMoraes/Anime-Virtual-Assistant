@@ -31,7 +31,7 @@ public class AssistantCore {
 
         // Register all available actions
         actionManager.registerAction(new ScreenAnalysisAction());
-    actionManager.registerAction(new actions.LevelsTaskAction());
+        actionManager.registerAction(new actions.LevelsTaskAction());
 
         // Future actions can be registered here:
         // actionManager.registerAction(new NoteTakingAction());

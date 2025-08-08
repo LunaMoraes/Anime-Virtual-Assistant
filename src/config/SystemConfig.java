@@ -85,7 +85,7 @@ public class SystemConfig {
         private String visionPrompt;
         private String fallbackPrompt;
         private String multimodalPrompt;
-    private String tasks; // instruction on how to split and format responses
+        private String tasks; // instruction on how to split and format responses
 
         // Default constructor for Gson
         public PromptsConfig() {}

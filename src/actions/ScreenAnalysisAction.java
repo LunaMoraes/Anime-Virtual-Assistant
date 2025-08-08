@@ -167,8 +167,8 @@ public class ScreenAnalysisAction implements Action {
             base = getString(context, personalityPrompt);
         }
 
-    String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
-    String finalPrompt = unified.isBlank() ? base : unified + "\n\n" + base;
+        String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
+        String finalPrompt = unified.isBlank() ? base : unified + "\n\n" + base;
         System.out.println("Final prompt sent to LLM: " + finalPrompt);
         return ApiClient.generateResponse(finalPrompt);
     }
@@ -199,7 +199,7 @@ public class ScreenAnalysisAction implements Action {
         // cache raw for later task extraction
         this.rawForTasksCache = rawResponse;
         int thinkTagEnd = rawResponse.lastIndexOf("</think>");
-    String afterThink = (thinkTagEnd != -1)
+        String afterThink = (thinkTagEnd != -1)
         ? rawResponse.substring(thinkTagEnd + "</think>".length())
         : rawResponse;
 
@@ -282,7 +282,7 @@ public class ScreenAnalysisAction implements Action {
     }
 
     private String processMultimodal(BufferedImage image) throws Exception {
-    String personalityPrompt = PersonalityManager.getCurrentMultimodalPrompt();
+        String personalityPrompt = PersonalityManager.getCurrentMultimodalPrompt();
 
         System.out.println("DEBUG: Multimodal prompt from personality: " + personalityPrompt);
 
@@ -292,8 +292,8 @@ public class ScreenAnalysisAction implements Action {
             return generateResponse(imageDescription);
         }
 
-    String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
-    String finalPrompt = unified.isBlank() ? getFinalPrompt(personalityPrompt) : unified + "\n\n" + getFinalPrompt(personalityPrompt);
+        String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
+        String finalPrompt = unified.isBlank() ? getFinalPrompt(personalityPrompt) : unified + "\n\n" + getFinalPrompt(personalityPrompt);
         System.out.println("Final multimodal prompt sent: " + finalPrompt);
 
         return ApiClient.analyzeImageMultimodal(image, finalPrompt);
@@ -305,8 +305,8 @@ public class ScreenAnalysisAction implements Action {
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(personalityPrompt);
         
-    // Ensure the model knows how to format the spoken output
-    promptBuilder.append(" For this task, output your spoken sentence wrapped exactly as [speak:(content)].");
+        // Ensure the model knows how to format the spoken output
+        promptBuilder.append(" For this task, output your spoken sentence wrapped exactly as [speak:(content)].");
 
         if (lastResponse != null && !lastResponse.isEmpty()) {
             promptBuilder.append(" Do not use special characters, formatting or emojis in your response.");

@@ -119,31 +119,4 @@ public class ThinkingEngine {
     public boolean isThinking() {
         return isThinking.get();
     }
-
-    // Future methods for different types of decision-making:
-
-    /**
-     * Future method: Analyzes if note-taking actions should be executed.
-     */
-    private void executeNoteTakingActions(ActionContext context) {
-        // TODO: Implement when note-taking functionality is added
-        // Could analyze if user is working on something that should be documented
-        // Could trigger based on certain screen patterns or time intervals
-    }
-
-    /**
-     * Future method: Analyzes if scheduling-related actions should be executed.
-     */
-    private void executeSchedulingActions(ActionContext context) {
-        // TODO: Implement when scheduling functionality is added
-        // Could check calendar, reminders, time-based triggers
-    }
-
-    /**
-     * Future method: Executes system maintenance and optimization actions.
-     */
-    private void executeMaintenanceActions(ActionContext context) {
-        // TODO: Implement system maintenance actions
-        // Could clean up old data, optimize performance, check system health
-    }
 }

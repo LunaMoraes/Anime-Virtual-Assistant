@@ -33,11 +33,11 @@ public class LevelsTaskAction implements Action {
     public ActionResult execute(ActionContext context) {
         // Build the dynamic payload containing attributes and skills
         Map<String, Object> payload = new HashMap<>();
-    payload.put("available_attributes", LevelManager.getAttributes());
-    // Provide both a list of names and a detailed map for LLM clarity
-    java.util.Map<String, levels.SkillInfo> skillsDetail = LevelManager.getAvailableSkills();
-    payload.put("skills_detail", skillsDetail);
-    payload.put("current_skills", new java.util.ArrayList<>(skillsDetail.keySet()));
+        payload.put("available_attributes", LevelManager.getAttributes());
+        // Provide both a list of names and a detailed map for LLM clarity
+        java.util.Map<String, levels.SkillInfo> skillsDetail = LevelManager.getAvailableSkills();
+        payload.put("skills_detail", skillsDetail);
+        payload.put("current_skills", new java.util.ArrayList<>(skillsDetail.keySet()));
         payload.put("attributes_xp", LevelManager.getAttributeXp());
 
         // Compose content strictly from configuration files and data; SA will just append this
@@ -60,7 +60,7 @@ public class LevelsTaskAction implements Action {
             }
         } catch (Exception ignored) {}
 
-    // DATA (JSON) section
+        // DATA (JSON) section
         JsonObject data = new JsonObject();
         data.add("levels", com.google.gson.JsonParser.parseString(GSON.toJson(payload)));
         other.append("DATA (JSON): ").append(data.toString()).append("\n");

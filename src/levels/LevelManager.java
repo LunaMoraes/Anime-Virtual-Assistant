@@ -39,11 +39,11 @@ public class LevelManager {
     private static final List<Runnable> listeners = new ArrayList<>();
 
     public static void initialize() {
-    attributes = loadAttributes();
-    userLevels = loadOrCreateUserLevels(attributes);
-    // Derive attribute levels from skills on startup (and persist if needed)
-    recomputeAttributesFromSkills();
-    save();
+        attributes = loadAttributes();
+        userLevels = loadOrCreateUserLevels(attributes);
+        // Derive attribute levels from skills on startup (and persist if needed)
+        recomputeAttributesFromSkills();
+        save();
     }
 
     public static List<String> getAttributes() {
@@ -217,7 +217,7 @@ public class LevelManager {
             map.put(a, 0);
         }
         defaults.setAttributesXp(map);
-    defaults.setAvailableSkills(new LinkedHashMap<>());
+        defaults.setAvailableSkills(new LinkedHashMap<>());
         return defaults;
     }
 

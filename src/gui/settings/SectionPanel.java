@@ -23,6 +23,6 @@ public class SectionPanel extends JPanel {
         add(titleLabel, BorderLayout.NORTH);
 
         add(Box.createVerticalStrut(10), BorderLayout.CENTER);
-    add(content, BorderLayout.SOUTH);
+        add(content, BorderLayout.SOUTH);
     }
 }

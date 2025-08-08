@@ -55,9 +55,9 @@ public class SettingsWindow extends JFrame {
         JPanel settingsTab = createSettingsTab();
         tabbedPane.addTab("Settings", new ImageIcon(), settingsTab, "Advanced model settings");
 
-    // Profile tab - Levels and Skills
-    JPanel profileTab = createProfileTab();
-    tabbedPane.addTab("Profile", new ImageIcon(), profileTab, "User attributes & skills");
+        // Profile tab - Levels and Skills
+        JPanel profileTab = createProfileTab();
+        tabbedPane.addTab("Profile", new ImageIcon(), profileTab, "User attributes & skills");
 
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
@@ -174,13 +174,13 @@ public class SettingsWindow extends JFrame {
         mainTab.setOpaque(false); // Make transparent to show background
         mainTab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-    // Voice section
-    JPanel voiceSection = createSection("Assistant Voice", new VoicePanel(voices));
+        // Voice section
+        JPanel voiceSection = createSection("Assistant Voice", new VoicePanel(voices));
         mainTab.add(voiceSection);
         mainTab.add(Box.createVerticalStrut(20));
 
         // Personality section
-    JPanel personalitySection = createSection("Personality", new PersonalityPanel());
+        JPanel personalitySection = createSection("Personality", new PersonalityPanel());
         mainTab.add(personalitySection);
 
         // Add flexible space at the bottom
