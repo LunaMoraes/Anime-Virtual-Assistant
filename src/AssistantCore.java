@@ -49,7 +49,7 @@ public class AssistantCore {
         scheduler.scheduleAtFixedRate(
             thinkingEngine::think,
             0,
-            3, // Think every 3 seconds
+            5, // Think every 5 seconds
             TimeUnit.SECONDS
         );
 
