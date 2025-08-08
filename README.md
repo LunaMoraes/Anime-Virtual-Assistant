@@ -34,7 +34,7 @@ To get the assistant running on your machine, follow these steps.
 
 ### Prerequisites
 
-- **Java:** Version 21 or newer
+- **Java:** Version 21, also called JDK 21 in the link below.
 https://www.oracle.com/br/java/technologies/downloads/
 - **Python:** Version 3.12 -- DO NOT USE ANY OTHER VERSION! 
 https://www.python.org/downloads/release/python-3120/
