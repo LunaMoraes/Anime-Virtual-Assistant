@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.List;
 import javax.imageio.ImageIO;
 import personality.Personality;
+import api.TtsApiClient;
 
 /**
  * Modern settings window with tabbed interface and background image.
@@ -531,8 +532,43 @@ public class SettingsWindow extends JFrame {
                 Main.assistantCore.stopProcessing();
                 startStopButton.setText("Start Assistant");
             } else {
-                Main.assistantCore.startProcessing();
-                startStopButton.setText("Stop Assistant");
+                // Check if TTS API is available before starting
+                if (!AppState.isTtsApiAvailable) {
+                    // TTS wasn't available at startup, check again now
+                    if (TtsApiClient.isApiAvailable()) {
+                        // TTS is now available, update everything
+                        AppState.isTtsApiAvailable = true;
+                        List<String> voices = TtsApiClient.getAvailableCharacters();
+                        if (voices != null && !voices.isEmpty()) {
+                            // Update voice selection if needed
+                            if (AppState.selectedTtsCharacterVoice == null) {
+                                AppState.selectedTtsCharacterVoice = voices.get(0);
+                                AppState.saveCurrentSettings();
+                            }
+                            // Update the voice selector in the UI
+                            updateVoiceSelector(voices);
+                            // Proceed with starting the assistant
+                            Main.assistantCore.startProcessing();
+                            startStopButton.setText("Stop Assistant");
+                        } else {
+                            // Still no voices available
+                            JOptionPane.showMessageDialog(this,
+                                "TTS API is responding but no voices are available.",
+                                "No Voices Available",
+                                JOptionPane.ERROR_MESSAGE);
+                        }
+                    } else {
+                        // TTS is still not available - simple message
+                        JOptionPane.showMessageDialog(this,
+                            "TTS API Server is still not running.\nPlease start the TTS API server (start_api_coqui.py) and try again.",
+                            "TTS API Not Available",
+                            JOptionPane.ERROR_MESSAGE);
+                    }
+                } else {
+                    // TTS was available at startup, proceed normally
+                    Main.assistantCore.startProcessing();
+                    startStopButton.setText("Stop Assistant");
+                }
             }
         });
 
@@ -657,6 +693,59 @@ public class SettingsWindow extends JFrame {
                 return (JTabbedPane) component;
             } else if (component instanceof Container) {
                 JTabbedPane found = findTabbedPane((Container) component);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+
+    private void updateStartButtonText(String text) {
+        // Find the start button and update its text
+        Component startButton = findStartButton(this.getContentPane());
+        if (startButton instanceof JButton) {
+            ((JButton) startButton).setText(text);
+        }
+    }
+
+    private Component findStartButton(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JButton) {
+                JButton button = (JButton) component;
+                if (button.getText().contains("Assistant")) {
+                    return button;
+                }
+            } else if (component instanceof Container) {
+                Component found = findStartButton((Container) component);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private void updateVoiceSelector(List<String> voices) {
+        // Find the voice selector and update it with new voices
+        Component voiceSelector = findVoiceSelector(this.getContentPane());
+        if (voiceSelector instanceof JComboBox) {
+            JComboBox<String> comboBox = (JComboBox<String>) voiceSelector;
+            comboBox.removeAllItems();
+            for (String voice : voices) {
+                comboBox.addItem(voice);
+            }
+            // Set the selected voice
+            if (AppState.selectedTtsCharacterVoice != null) {
+                comboBox.setSelectedItem(AppState.selectedTtsCharacterVoice);
+            }
+        }
+    }
+
+    private Component findVoiceSelector(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JComboBox) {
+                // This is a simple check - in a more complex app you'd want to be more specific
+                return component;
+            } else if (component instanceof Container) {
+                Component found = findVoiceSelector((Container) component);
                 if (found != null) return found;
             }
         }

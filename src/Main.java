@@ -20,20 +20,31 @@ public class Main {
         List<String> voices = TtsApiClient.getAvailableCharacters();
 
         if (voices == null || voices.isEmpty()) {
-            JOptionPane.showMessageDialog(null, "Could not connect to the TTS API Server.\nPlease ensure api.py is running.", "Connection Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+            System.out.println("TTS API not available at startup - user will be prompted when starting assistant");
+            AppState.isTtsApiAvailable = false;
+            // Create empty voices array for SettingsWindow
+            voices = new java.util.ArrayList<>();
 
-        // Set default voice if none was loaded from settings
-        if (AppState.selectedTtsCharacterVoice == null && !voices.isEmpty()) {
-            AppState.selectedTtsCharacterVoice = voices.get(0);
-            AppState.saveCurrentSettings();
+            // Show error dialog to user immediately
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(null,
+                    "Could not connect to the TTS API Server.\nPlease ensure start_api_coqui.py is running.",
+                    "Connection Error",
+                    JOptionPane.ERROR_MESSAGE);
+            });
+        } else {
+            AppState.isTtsApiAvailable = true;
+            // Set default voice if none was loaded from settings
+            if (AppState.selectedTtsCharacterVoice == null && !voices.isEmpty()) {
+                AppState.selectedTtsCharacterVoice = voices.get(0);
+                AppState.saveCurrentSettings();
+            }
+            System.out.println("TTS voices found. Selected voice: " + AppState.selectedTtsCharacterVoice);
         }
-
-        System.out.println("TTS voices found. Selected voice: " + AppState.selectedTtsCharacterVoice);
 
         assistantCore = new AssistantCore();
 
+        List<String> finalVoices = voices;
         SwingUtilities.invokeLater(() -> {
             // Create CharacterUI first so it can be updated by SettingsWindow
             characterUI = new CharacterUI();
@@ -63,7 +74,7 @@ public class Main {
             });
 
             // Now create SettingsWindow
-            new SettingsWindow(voices.toArray(new String[0]));
+            new SettingsWindow(finalVoices.toArray(new String[0]));
         });
     }
 }

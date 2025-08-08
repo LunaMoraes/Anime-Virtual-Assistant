@@ -11,6 +11,7 @@ public class AppState {
 
     // --- Essential Application State ---
     public static volatile boolean isRunning = false;
+    public static volatile boolean isTtsApiAvailable = false;
 
     // --- UI Configuration ---
     public static final String FALLBACK_IMAGE_URL = "";

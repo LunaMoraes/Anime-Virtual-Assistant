@@ -38,6 +38,22 @@ public class TtsApiClient {
         uiCallback = callback;
     }
 
+    /**
+     * Checks if the TTS API server is running and available
+     */
+    public static boolean isApiAvailable() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(TTS_API_URL + "/characters"))
+                    .timeout(java.time.Duration.ofSeconds(3))  // Short timeout for quick check
+                    .GET().build();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static List<String> getAvailableCharacters() {
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -48,7 +64,8 @@ public class TtsApiClient {
                 return gson.fromJson(response.body(), new com.google.gson.reflect.TypeToken<List<String>>() {}.getType());
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            // Don't print stack trace for connection errors - TTS API might just not be running
+            System.out.println("Could not connect to TTS API: " + e.getClass().getSimpleName());
         }
         return null;
     }
