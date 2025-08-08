@@ -35,9 +35,11 @@ To get the assistant running on your machine, follow these steps.
 ### Prerequisites
 
 - **Java:** Version 21 or newer
-- **Python:** Version 3.12 -- DO NOT USE ANY OTHER VERSION!
+https://www.oracle.com/br/java/technologies/downloads/
+- **Python:** Version 3.12 -- DO NOT USE ANY OTHER VERSION! 
+https://www.python.org/downloads/release/python-3120/
 - **Python Dependencies:** Required libraries (e.g., `Flask`, `Coqui TTS`) must be installed.
-
+(requirements.txt)
 ---
 
 ### Installation & Launch
@@ -50,8 +52,17 @@ git clone https://github.com/LunaMoraes/Anime-Virtual-Assistant/
 
 #### 2. Start the Backend API Server
 
-Navigate into the cloned folder, then run:
+Navigate into the cloned folder within a CMD. 
 
+If you plan to use CUDA (faster processing but requires nvidia GPU), use the command below before anything:
+```bash
+py -3.12 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+Then, regardless of the previous step run the requirements:
+```bash
+py -3.12 -m pip install -r requirements.txt
+```
 ```bash
 # (First, ensure you’ve installed the required packages from requirements.txt)
 py -3.12 start_api_coqui.py
