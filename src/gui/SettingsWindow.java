@@ -55,6 +55,10 @@ public class SettingsWindow extends JFrame {
         JPanel settingsTab = createSettingsTab();
         tabbedPane.addTab("Settings", new ImageIcon(), settingsTab, "Advanced model settings");
 
+    // Profile tab - Levels and Skills
+    JPanel profileTab = createProfileTab();
+    tabbedPane.addTab("Profile", new ImageIcon(), profileTab, "User attributes & skills");
+
         mainPanel.add(tabbedPane, BorderLayout.CENTER);
 
         // Control panel with start/stop button
@@ -303,6 +307,38 @@ public class SettingsWindow extends JFrame {
         wrapper.setOpaque(false);
         wrapper.add(scrollPane, BorderLayout.CENTER);
 
+        return wrapper;
+    }
+
+    private JPanel createProfileTab() {
+        JPanel tab = new JPanel();
+        tab.setLayout(new BoxLayout(tab, BoxLayout.Y_AXIS));
+        tab.setOpaque(false);
+        tab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JPanel statsSection = createSection("Attributes", new ProfilePanel());
+        tab.add(statsSection);
+
+        JScrollPane scrollPane = new JScrollPane(tab);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setBorder(null);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(20);
+        scrollPane.getVerticalScrollBar().setBlockIncrement(80);
+
+        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = new Color(200, 100, 200, 150);
+                this.trackColor = new Color(40, 40, 40, 100);
+            }
+        });
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.add(scrollPane, BorderLayout.CENTER);
         return wrapper;
     }
 

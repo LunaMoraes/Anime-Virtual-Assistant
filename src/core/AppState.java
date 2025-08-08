@@ -37,6 +37,13 @@ public class AppState {
         // Load personalities
         PersonalityManager.loadPersonalities();
 
+        // Initialize levels system
+        try {
+            levels.LevelManager.initialize();
+        } catch (Throwable t) {
+            System.err.println("Levels system failed to initialize: " + t.getMessage());
+        }
+
         // Apply user settings to AppState variables
         applyUserSettings();
 

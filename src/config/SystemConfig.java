@@ -85,6 +85,7 @@ public class SystemConfig {
         private String visionPrompt;
         private String fallbackPrompt;
         private String multimodalPrompt;
+    private String tasks; // instruction on how to split and format responses
 
         // Default constructor for Gson
         public PromptsConfig() {}
@@ -102,6 +103,11 @@ public class SystemConfig {
         public String getMultimodalPrompt() {
             return multimodalPrompt != null ? multimodalPrompt :
                 "The attached screenshot shows a user activity, based on this and the later on personality quote give a response to the user.";
+        }
+
+        public String getTasksInstruction() {
+            return tasks != null ? tasks :
+                "You will receive a few tasks, for each task you will provide a different response. Use '[]' to wrap the response asked by the specific task. An ideal response will consist of multiple sequences of [] with the response inside for each.";
         }
     }
 }

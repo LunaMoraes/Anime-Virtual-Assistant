@@ -1,0 +1,11 @@
+{
+    "attributes": [
+      "Strength",
+      "Dexterity",
+      "Constitution",
+      "Intelligence",
+      "Wisdom",
+      "Charisma",
+      "Willpower"
+    ]
+}

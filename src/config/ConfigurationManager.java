@@ -208,4 +208,13 @@ public class ConfigurationManager {
                systemConfig.getPrompts().getMultimodalPrompt() :
                "The attached screenshot shows a user activity, based on this and the later on personality quote give a response to the user.";
     }
+
+    /**
+     * Gets the global tasks instruction from system configuration (prompts.tasks)
+     */
+    public static String getTasksInstruction() {
+        return systemConfig != null && systemConfig.getPrompts() != null ?
+               systemConfig.getPrompts().getTasksInstruction() :
+               "You will receive a few tasks, for each task you will provide a different response. Use '[]' to wrap the response asked by the specific task. An ideal response will consist of multiple sequences of [] with the response inside for each.";
+    }
 }

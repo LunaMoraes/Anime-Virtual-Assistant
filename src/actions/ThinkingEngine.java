@@ -56,7 +56,17 @@ public class ThinkingEngine {
             context.put("screenshot", screenshot);
         }
 
-        // For now, we just execute the screen analysis action
+        // First, let task-contributor actions add their tasks to the context.
+        // These actions should be lightweight and synchronous.
+        // Example: levels_task contributes level system task + payload.
+        if (actionManager.hasAction("levels_task")) {
+            ActionResult r = actionManager.executeAction("levels_task", context);
+            if (r.isFailure()) {
+                System.err.println("levels_task failed: " + r.getMessage());
+            }
+        }
+
+        // Now execute the screen analysis action which will assemble the full LLM prompt
         // In the future, this could analyze various conditions:
         // - Time of day
         // - User activity patterns
