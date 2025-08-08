@@ -1,0 +1,24 @@
+﻿{
+  "analysis": {
+    "key": "",
+    "model_name": "",
+    "url": ""
+  },
+  "vision": {
+    "key": "",
+    "model_name": "",
+    "url": ""
+  },
+  "multimodal": {
+    "key": "",
+    "model_name": "",
+    "url": ""
+  },
+
+  "prompts": {
+    "vision_prompt": "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.",
+    "fallback_personality_prompt": "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).",
+    "multimodal_prompt": "The attached screenshot shows a user activity, based on this and the later on personality quote give a response to the user.",
+    "tasks": "You may receive one or more tasks. YOU MUST RESPOND TO ALL TASKS. For each task, return a separate bracketed section using square brackets, as specified by that task's own instructions (for example: [task_label:payload] or [task_label(payload)]). Output one bracketed section per task. Do not include any text outside of bracketed sections. Keep each section concise and only include what the task specifies."
+  }
+}
