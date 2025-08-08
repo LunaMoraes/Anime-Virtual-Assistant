@@ -61,10 +61,11 @@ py -3.12 -m pip install torch torchvision torchaudio --index-url https://downloa
 
 Then, regardless of the previous step run the requirements:
 ```bash
+# Please note that this command might take up to 10min if your computer is slow.
 py -3.12 -m pip install -r requirements.txt
 ```
 ```bash
-# (First, ensure you’ve installed the required packages from requirements.txt)
+# (First, ensure you’ve installed the required packages from requirements.txt).
 py -3.12 start_api_coqui.py
 ```
 
