@@ -1,0 +1,25 @@
+-----------------------------------------------------------------------------
+Requirements for the Coqui TTS API Server
+-----------------------------------------------------------------------------
+To install these dependencies, run the following command in your terminal:
+pip install -r requirements.txt
+For GPU support (NVIDIA), first install the PyTorch version with CUDA
+by following the instructions at https://pytorch.org/get-started/locally/
+Example command for PyTorch with CUDA 12.1 (run this BEFORE pip install -r requirements.txt):
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+-----------------------------------------------------------------------------
+Main Text-to-Speech library
+TTS
+
+Web server framework
+Flask
+
+For audio manipulation and saving
+numpy
+soundfile
+
+PyTorch - Core machine learning library.
+The line below is for CPU-only. For GPU, install manually first (see above).
+torch
+torchvision
+torchaudio
