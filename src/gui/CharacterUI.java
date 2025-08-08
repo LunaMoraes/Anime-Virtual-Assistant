@@ -1,9 +1,12 @@
+package gui;
+
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import personality.Personality;
+import core.AppState;
 
 /**
  * Creates the always-on-top, transparent window for the assistant's image.

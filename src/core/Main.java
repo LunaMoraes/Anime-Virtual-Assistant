@@ -1,3 +1,5 @@
+package core;
+
 import javax.swing.*;
 import java.util.List;
 import api.TtsApiClient;
@@ -8,7 +10,7 @@ import api.TtsApiClient;
  */
 public class Main {
     public static AssistantCore assistantCore;
-    public static CharacterUI characterUI;
+    public static gui.CharacterUI characterUI;
 
     public static void main(String[] args) {
         System.out.println("Initializing AI Assistant...");
@@ -47,7 +49,7 @@ public class Main {
         List<String> finalVoices = voices;
         SwingUtilities.invokeLater(() -> {
             // Create CharacterUI first so it can be updated by SettingsWindow
-            characterUI = new CharacterUI();
+            characterUI = new gui.CharacterUI();
             characterUI.setVisible(true);
 
             // Set up TTS UI callback so TtsApiClient can control the UI properly
@@ -74,7 +76,7 @@ public class Main {
             });
 
             // Now create SettingsWindow
-            new SettingsWindow(finalVoices.toArray(new String[0]));
+            new gui.SettingsWindow(finalVoices.toArray(new String[0]));
         });
     }
 }

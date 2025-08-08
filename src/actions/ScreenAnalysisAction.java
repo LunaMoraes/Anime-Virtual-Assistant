@@ -4,11 +4,14 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import api.ApiClient;
 import api.TtsApiClient;
 import config.ConfigurationManager;
 import personality.PersonalityManager;
+import core.AppState;
 
 /**
  * Action that captures screenshots and processes them with AI analysis.
@@ -18,6 +21,7 @@ public class ScreenAnalysisAction implements Action {
 
     private final List<BufferedImage> screenshotBuffer = new ArrayList<>();
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
+    private static final ExecutorService PROCESSOR = Executors.newSingleThreadExecutor(r -> new Thread(r, "screen-analysis-processor"));
 
     @Override
     public String getActionId() {
@@ -31,16 +35,7 @@ public class ScreenAnalysisAction implements Action {
 
     @Override
     public boolean canExecute(ActionContext context) {
-        // Access AppState through reflection to avoid import issues
-        try {
-            Class<?> appStateClass = Class.forName("AppState");
-            java.lang.reflect.Field isRunningField = appStateClass.getField("isRunning");
-            boolean isRunning = (Boolean) isRunningField.get(null);
-            return isRunning && !isProcessing.get();
-        } catch (Exception e) {
-            System.err.println("Could not access AppState.isRunning: " + e.getMessage());
-            return false;
-        }
+    return AppState.isRunning && !isProcessing.get();
     }
 
     @Override
@@ -79,8 +74,8 @@ public class ScreenAnalysisAction implements Action {
                 screenshotBuffer.clear();
             }
 
-            // Process in background thread to avoid blocking
-            new Thread(() -> {
+            // Process in background executor to avoid blocking and prevent thread leaks
+            PROCESSOR.submit(() -> {
                 try {
                     processAndRespond(images.get(0));
                 } catch (Exception e) {
@@ -89,7 +84,7 @@ public class ScreenAnalysisAction implements Action {
                 } finally {
                     isProcessing.set(false);
                 }
-            }).start();
+            });
 
             return ActionResult.success("Screen analysis initiated");
 
@@ -102,24 +97,10 @@ public class ScreenAnalysisAction implements Action {
     private void processAndRespond(BufferedImage image) throws Exception {
         String finalResponseToSpeak;
 
-        // Check if we're using multimodal mode using reflection
-        boolean useMultimodal = false;
-        String selectedTtsVoice = null;
-        String selectedLanguage = "English";
-
-        try {
-            Class<?> appStateClass = Class.forName("AppState");
-            java.lang.reflect.Method useMultimodalMethod = appStateClass.getMethod("useMultimodal");
-            useMultimodal = (Boolean) useMultimodalMethod.invoke(null);
-
-            java.lang.reflect.Field voiceField = appStateClass.getField("selectedTtsCharacterVoice");
-            selectedTtsVoice = (String) voiceField.get(null);
-
-            java.lang.reflect.Field languageField = appStateClass.getField("selectedLanguage");
-            selectedLanguage = (String) languageField.get(null);
-        } catch (Exception e) {
-            System.err.println("Could not access AppState fields: " + e.getMessage());
-        }
+    // Access AppState directly now that it's in a proper package
+    boolean useMultimodal = AppState.useMultimodal();
+    String selectedTtsVoice = AppState.selectedTtsCharacterVoice;
+    String selectedLanguage = AppState.selectedLanguage;
 
         if (useMultimodal) {
             System.out.println("Using multimodal mode - single request");

@@ -1,12 +1,15 @@
+package gui;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ItemEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import javax.imageio.ImageIO;
-import personality.Personality;
 import api.TtsApiClient;
+import core.AppState;
+import core.Main;
+import gui.settings.*;
 
 /**
  * Modern settings window with tabbed interface and background image.
@@ -167,13 +170,13 @@ public class SettingsWindow extends JFrame {
         mainTab.setOpaque(false); // Make transparent to show background
         mainTab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Voice section
-        JPanel voiceSection = createSection("Assistant Voice", createVoicePanel(voices));
+    // Voice section
+    JPanel voiceSection = createSection("Assistant Voice", new VoicePanel(voices));
         mainTab.add(voiceSection);
         mainTab.add(Box.createVerticalStrut(20));
 
         // Personality section
-        JPanel personalitySection = createSection("Personality", createPersonalityPanel());
+    JPanel personalitySection = createSection("Personality", new PersonalityPanel());
         mainTab.add(personalitySection);
 
         // Add flexible space at the bottom
@@ -231,27 +234,27 @@ public class SettingsWindow extends JFrame {
         settingsTab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // Language section
-        JPanel languageSection = createSection("Language", createLanguagePanel());
+        JPanel languageSection = createSection("Language", new LanguagePanel());
         settingsTab.add(languageSection);
         settingsTab.add(Box.createVerticalStrut(20));
 
         // Multimodal section
-        JPanel multimodalSection = createSection("Multimodal Model", createMultimodalPanel());
+        JPanel multimodalSection = createSection("Multimodal Model", new MultimodalPanel(this::refreshSettingsTab));
         settingsTab.add(multimodalSection);
         settingsTab.add(Box.createVerticalStrut(20));
 
         // Conditional sections based on multimodal mode
         if (AppState.useMultimodal()) {
             // Show unified Model Settings section
-            JPanel modelSection = createSection("Model Settings", createUnifiedModelPanel());
+            JPanel modelSection = createSection("Model Settings", new UnifiedModelPanel());
             settingsTab.add(modelSection);
         } else {
             // Show separate Vision and Analysis sections
-            JPanel visionSection = createSection("Vision Model", createVisionModelPanel());
+            JPanel visionSection = createSection("Vision Model", new VisionModelPanel());
             settingsTab.add(visionSection);
             settingsTab.add(Box.createVerticalStrut(20));
 
-            JPanel analysisSection = createSection("Analysis Model", createAnalysisModelPanel());
+            JPanel analysisSection = createSection("Analysis Model", new AnalysisModelPanel());
             settingsTab.add(analysisSection);
         }
 
@@ -304,204 +307,10 @@ public class SettingsWindow extends JFrame {
     }
 
     private JPanel createSection(String title, JPanel content) {
-        JPanel section = new JPanel(new BorderLayout());
-        // Semi-transparent dark background for readability
-        section.setBackground(new Color(40, 40, 40, 200)); // Dark with transparency
-        section.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(150, 100, 200, 180), 2), // Purple border
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
-        ));
-
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setForeground(Color.WHITE); // White text for dark mode
-        section.add(titleLabel, BorderLayout.NORTH);
-
-        section.add(Box.createVerticalStrut(10), BorderLayout.CENTER);
-        section.add(content, BorderLayout.SOUTH);
-
-        return section;
+        return new SectionPanel(title, content);
     }
 
-    private JPanel createVoicePanel(String[] voices) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setOpaque(false); // Transparent to match section
-
-        JComboBox<String> voiceSelector = new JComboBox<>(voices);
-        voiceSelector.setSelectedItem(AppState.selectedTtsCharacterVoice);
-        voiceSelector.setPreferredSize(new Dimension(200, 30));
-        panel.add(voiceSelector);
-
-        voiceSelector.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) {
-                AppState.selectedTtsCharacterVoice = (String) e.getItem();
-                System.out.println("Voice changed to: " + AppState.selectedTtsCharacterVoice);
-                AppState.saveCurrentSettings();
-            }
-        });
-
-        return panel;
-    }
-
-    private JPanel createPersonalityPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setOpaque(false); // Transparent to match section
-
-        List<Personality> personalities = AppState.getAvailablePersonalities();
-
-        if (personalities.isEmpty()) {
-            JLabel noPersonalitiesLabel = new JLabel("No personalities found. Check data folder.");
-            noPersonalitiesLabel.setForeground(Color.WHITE); // White text for dark mode
-            panel.add(noPersonalitiesLabel);
-            return panel;
-        }
-
-        ButtonGroup personalityGroup = new ButtonGroup();
-
-        for (Personality personality : personalities) {
-            JRadioButton radioButton = new JRadioButton(personality.getName());
-            radioButton.setOpaque(false); // Transparent background
-            radioButton.setForeground(Color.WHITE); // White text for dark mode
-            radioButton.setFont(new Font("Arial", Font.PLAIN, 12));
-            personalityGroup.add(radioButton);
-
-            // Set selected if this is the current personality
-            Personality selectedPersonality = AppState.getSelectedPersonality();
-            if (selectedPersonality != null &&
-                    personality.getName().equals(selectedPersonality.getName())) {
-                radioButton.setSelected(true);
-            }
-
-            radioButton.addActionListener(e -> {
-                if (radioButton.isSelected()) {
-                    AppState.setSelectedPersonality(personality);
-                }
-            });
-
-            panel.add(radioButton);
-        }
-
-        return panel;
-    }
-
-    private JPanel createLanguagePanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setOpaque(false); // Transparent to match section
-
-        String[] languages = {"English", "Japanese", "Chinese"};
-        JComboBox<String> languageSelector = new JComboBox<>(languages);
-        languageSelector.setSelectedItem(AppState.selectedLanguage);
-        languageSelector.setPreferredSize(new Dimension(200, 30));
-        panel.add(languageSelector);
-
-        languageSelector.addItemListener(e -> {
-            if (e.getStateChange() == ItemEvent.SELECTED) {
-                AppState.selectedLanguage = (String) e.getItem();
-                System.out.println("Language changed to: " + AppState.selectedLanguage);
-                AppState.saveCurrentSettings();
-            }
-        });
-
-        return panel;
-    }
-
-    private JPanel createVisionModelPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setOpaque(false); // Transparent to match section
-
-        ButtonGroup visionModelGroup = new ButtonGroup();
-
-        JRadioButton localVisionButton = new JRadioButton("Local");
-        JRadioButton apiVisionButton = new JRadioButton("API");
-
-        localVisionButton.setOpaque(false);
-        localVisionButton.setForeground(Color.WHITE);
-        apiVisionButton.setOpaque(false);
-        apiVisionButton.setForeground(Color.WHITE);
-
-        visionModelGroup.add(localVisionButton);
-        visionModelGroup.add(apiVisionButton);
-
-        // Set initial selection based on current state
-        if (AppState.useApiVision()) {
-            apiVisionButton.setSelected(true);
-        } else {
-            localVisionButton.setSelected(true);
-        }
-
-        // Disable API option if configuration is not available
-        if (!AppState.isVisionApiConfigAvailable()) {
-            apiVisionButton.setEnabled(false);
-            apiVisionButton.setToolTipText("Vision API configuration not available in data/system/system.json");
-        }
-
-        localVisionButton.addActionListener(e -> {
-            if (localVisionButton.isSelected()) {
-                AppState.setUseApiVision(false);
-            }
-        });
-
-        apiVisionButton.addActionListener(e -> {
-            if (apiVisionButton.isSelected()) {
-                AppState.setUseApiVision(true);
-            }
-        });
-
-        panel.add(localVisionButton);
-        panel.add(apiVisionButton);
-
-        return panel;
-    }
-
-    private JPanel createAnalysisModelPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setOpaque(false); // Transparent to match section
-
-        ButtonGroup analysisModelGroup = new ButtonGroup();
-
-        JRadioButton localAnalysisButton = new JRadioButton("Local");
-        JRadioButton apiAnalysisButton = new JRadioButton("API");
-
-        localAnalysisButton.setOpaque(false);
-        localAnalysisButton.setForeground(Color.WHITE);
-        apiAnalysisButton.setOpaque(false);
-        apiAnalysisButton.setForeground(Color.WHITE);
-
-        analysisModelGroup.add(localAnalysisButton);
-        analysisModelGroup.add(apiAnalysisButton);
-
-        // Set initial selection based on current state
-        if (AppState.useApiAnalysis()) {
-            apiAnalysisButton.setSelected(true);
-        } else {
-            localAnalysisButton.setSelected(true);
-        }
-
-        // Disable API option if configuration is not available
-        if (!AppState.isAnalysisApiConfigAvailable()) {
-            apiAnalysisButton.setEnabled(false);
-            apiAnalysisButton.setToolTipText("Analysis API configuration not available in data/system/system.json");
-        }
-
-        localAnalysisButton.addActionListener(e -> {
-            if (localAnalysisButton.isSelected()) {
-                AppState.setUseApiAnalysis(false);
-            }
-        });
-
-        apiAnalysisButton.addActionListener(e -> {
-            if (apiAnalysisButton.isSelected()) {
-                AppState.setUseApiAnalysis(true);
-            }
-        });
-
-        panel.add(localAnalysisButton);
-        panel.add(apiAnalysisButton);
-
-        return panel;
-    }
-
+    // old inline creators replaced by modular panels
     private JPanel createControlPanel() {
         JPanel controlPanel = new JPanel(new FlowLayout());
         controlPanel.setOpaque(false); // Make transparent to show background
@@ -581,103 +390,7 @@ public class SettingsWindow extends JFrame {
         return controlPanel;
     }
 
-    private JPanel createMultimodalPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setOpaque(false); // Transparent to match section
-
-        ButtonGroup multimodalGroup = new ButtonGroup();
-
-        JRadioButton enabledButton = new JRadioButton("Yes");
-        JRadioButton disabledButton = new JRadioButton("No");
-
-        enabledButton.setOpaque(false);
-        enabledButton.setForeground(Color.WHITE);
-        disabledButton.setOpaque(false);
-        disabledButton.setForeground(Color.WHITE);
-
-        multimodalGroup.add(enabledButton);
-        multimodalGroup.add(disabledButton);
-
-        // Set initial selection based on current state
-        if (AppState.useMultimodal()) {
-            enabledButton.setSelected(true);
-        } else {
-            disabledButton.setSelected(true);
-        }
-
-        // Disable if configuration is not available
-        if (!AppState.isMultimodalApiConfigAvailable()) {
-            enabledButton.setEnabled(false);
-            enabledButton.setToolTipText("Multimodal API configuration not available in data/system/system.json");
-        }
-
-        enabledButton.addActionListener(e -> {
-            if (enabledButton.isSelected()) {
-                AppState.setUseMultimodal(true);
-                refreshSettingsTab();
-            }
-        });
-
-        disabledButton.addActionListener(e -> {
-            if (disabledButton.isSelected()) {
-                AppState.setUseMultimodal(false);
-                refreshSettingsTab();
-            }
-        });
-
-        panel.add(disabledButton);
-        panel.add(enabledButton);
-
-        return panel;
-    }
-
-    private JPanel createUnifiedModelPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        panel.setOpaque(false); // Transparent to match section
-
-        ButtonGroup modelGroup = new ButtonGroup();
-
-        JRadioButton localButton = new JRadioButton("Local");
-        JRadioButton apiButton = new JRadioButton("API");
-
-        localButton.setOpaque(false);
-        localButton.setForeground(Color.WHITE);
-        apiButton.setOpaque(false);
-        apiButton.setForeground(Color.WHITE);
-
-        modelGroup.add(localButton);
-        modelGroup.add(apiButton);
-
-        // Set initial selection based on current state
-        if (AppState.useApiMultimodal()) {
-            apiButton.setSelected(true);
-        } else {
-            localButton.setSelected(true);
-        }
-
-        // Disable API option if configuration is not available
-        if (!AppState.isMultimodalApiConfigAvailable()) {
-            apiButton.setEnabled(false);
-            apiButton.setToolTipText("Multimodal API configuration not available in data/system/system.json");
-        }
-
-        localButton.addActionListener(e -> {
-            if (localButton.isSelected()) {
-                AppState.setUseApiMultimodal(false);
-            }
-        });
-
-        apiButton.addActionListener(e -> {
-            if (apiButton.isSelected()) {
-                AppState.setUseApiMultimodal(true);
-            }
-        });
-
-        panel.add(localButton);
-        panel.add(apiButton);
-
-        return panel;
-    }
+    // unified model now modularized below
 
     private void refreshSettingsTab() {
         // Find the tabbed pane and refresh the settings tab
@@ -708,6 +421,7 @@ public class SettingsWindow extends JFrame {
         // Find the voice selector and update it with new voices
         Component voiceSelector = findVoiceSelector(this.getContentPane());
         if (voiceSelector instanceof JComboBox) {
+            @SuppressWarnings("unchecked")
             JComboBox<String> comboBox = (JComboBox<String>) voiceSelector;
             comboBox.removeAllItems();
             for (String voice : voices) {

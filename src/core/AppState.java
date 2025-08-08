@@ -1,3 +1,5 @@
+package core;
+
 import java.util.List;
 import config.ConfigurationManager;
 import personality.PersonalityManager;
@@ -64,9 +66,13 @@ public class AppState {
 
     public static void setSelectedPersonality(Personality personality) {
         PersonalityManager.setSelectedPersonality(personality);
-        // Update UI after personality change
-        if (Main.characterUI != null) {
-            Main.characterUI.updatePersonalityImages();
+        // Update UI after personality change (avoid hard dependency if Main not initialized)
+        try {
+            if (Main.characterUI != null) {
+                Main.characterUI.updatePersonalityImages();
+            }
+        } catch (Throwable ignored) {
+            // Main might not be initialized in some contexts; ignore
         }
     }
 
@@ -85,7 +91,7 @@ public class AppState {
     }
 
     public static boolean isMultimodalApiConfigAvailable() {
-        return ConfigurationManager.isMultimodalApiAvailable();
+        return ConfigurationManager.isMultimodalApiConfigAvailable();
     }
 
     public static void setUseApiVision(boolean useApi) {
