@@ -1,0 +1,53 @@
+{
+  "GladOS like voice": {
+    "category": "Adult Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Claribel Dervla"
+  },
+  "Student girl voice": {
+    "category": "Teen Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Daisy Studious"
+  },
+  "Professor voice": {
+    "category": "Adult Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Gracie Wise"
+  },
+  "Piratesoftware genderbent voice": {
+    "category": "Adult Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Tammie Ema"
+  },
+  "Very british girl voice": {
+    "category": "Adult Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Alison Dietlinde"
+  },
+  "Annmarie Nele": {
+    "category": "Adult Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Annmarie Nele"
+  },
+  "Default Girl Voice": {
+    "category": "Adult Human",
+    "model": "tts_models/en/ljspeech/vits"
+  },
+  "Slightly russian voice": {
+    "category": "Adult Human",
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Gitta Nikolina"
+  },
+  "Science girl voice": {
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Tammy Grit"
+  },
+  "Kidlike voice": {
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Andrew Chipper"
+  },
+  "Italian Voice": {
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker": "Badr Odhiambo"
+  }
+}

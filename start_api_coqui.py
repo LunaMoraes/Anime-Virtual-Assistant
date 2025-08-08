@@ -5,124 +5,27 @@ import io
 import numpy as np
 from TTS.api import TTS
 import os
+import json
 
 # --- Configuration ---
-# Available Coqui TTS speakers from VCTK dataset (real speakers)
-AVAILABLE_MODELS = {
-  "Claribel Dervla": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Claribel Dervla"
-  },
-  "Daisy Studious": {
-    "category": "Teen Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Daisy Studious"
-  },
-  "Gracie Wise": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Gracie Wise"
-  },
-  "Tammie Ema": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Tammie Ema"
-  },
-  "Alison Dietlinde": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Alison Dietlinde"
-  },
-  "Ana Florence": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Ana Florence"
-  },
-  "Annmarie Nele": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Annmarie Nele"
-  },
-  "Asya Anara": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Asya Anara"
-  },
-  "Brenda Stern": {
-    "category": "Robotic Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Brenda Stern"
-  },
-  "Gitta Nikolina": {
-    "category": "Adult Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Gitta Nikolina"
-  },
-  "Henriette Usha": {
-    "category": "Senior Human",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Henriette Usha"
-  },
-  "Sofia Hellen": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Sofia Hellen"
-  },
-  "Tammy Grit": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Tammy Grit"
-  },
-  "Tanja Adelina": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Tanja Adelina"
-  },
-  "Vjollca Johnnie": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Vjollca Johnnie"
-  },
-  "Andrew Chipper": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Andrew Chipper"
-  },
-  "Badr Odhiambo": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Badr Odhiambo"
-  },
-  "Dionisio Schuyler": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Dionisio Schuyler"
-  },
-  "Royston Min": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Royston Min"
-  },
-  "Viktor Eka": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Viktor Eka"
-  },
-  "Abrahan Mack": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Abrahan Mack"
-  },
-  "Adde Michal": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Adde Michal"
-  },
-  "Baldur Sanjin": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Baldur Sanjin"
-  },
-  "Craig Gutsy": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Craig Gutsy"
-  },
-  "Damien Black": {
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "speaker": "Damien Black"
-  }
-}
+def load_models_from_json(file_path):
+    """Loads the model configuration from a JSON file."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        print(f"FATAL: The voice list file was not found at '{file_path}'", file=sys.stderr)
+        sys.exit(1)
+    except json.JSONDecodeError:
+        print(f"FATAL: The voice list file at '{file_path}' is not a valid JSON.", file=sys.stderr)
+        sys.exit(1)
+
+# Load available models from the external JSON file
+VOICE_LIST_PATH = os.path.join("data", "voices", "voiceList.json")
+AVAILABLE_MODELS = load_models_from_json(VOICE_LIST_PATH)
 
 # Default model
-DEFAULT_MODEL = "Claribel Dervla"
+DEFAULT_MODEL = "Default Girl Voice"
 
 # The host and port for the API server
 HOST = "127.0.0.1"
@@ -165,6 +68,10 @@ def get_or_load_model(model_info):
 
 # Load default model at startup
 print("Loading default Coqui TTS model... This may take a moment.")
+if DEFAULT_MODEL not in AVAILABLE_MODELS:
+    print(f"FATAL: Default model '{DEFAULT_MODEL}' not found in the voice list.", file=sys.stderr)
+    sys.exit(1)
+
 default_model_info = AVAILABLE_MODELS[DEFAULT_MODEL]
 default_model = get_or_load_model(default_model_info)
 if not default_model:
