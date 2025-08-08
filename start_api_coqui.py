@@ -141,9 +141,20 @@ def get_or_load_model(model_info):
 
     if model_name not in loaded_models:
         print(f"Loading Coqui TTS model: {model_name}...")
+
+        # Determine the device to use (GPU if available, otherwise CPU)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        if device == "cuda":
+            print(">>> CONFIRMATION: CUDA is available. Loading model on GPU.")
+        else:
+            print(">>> CONFIRMATION: CUDA not available. Loading model on CPU.")
         try:
-            # Initialize TTS with the specific model
-            tts = TTS(model_name=model_name, progress_bar=False, gpu=torch.cuda.is_available())
+            # Initialize TTS without the deprecated 'gpu' parameter
+            tts = TTS(model_name=model_name, progress_bar=False)
+            # Move the model to the determined device
+            tts.to(device)
+
             loaded_models[model_name] = tts
             print(f"Model '{model_name}' loaded successfully.")
         except Exception as e:
@@ -273,7 +284,12 @@ def list_speakers():
         # Load the VCTK model to get speaker information
         model_name = "tts_models/multilingual/multi-dataset/xtts_v2"
         if model_name not in loaded_models:
-            tts = TTS(model_name=model_name, progress_bar=False, gpu=torch.cuda.is_available())
+            # Determine the device to use (GPU if available, otherwise CPU)
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            # Initialize TTS without the deprecated 'gpu' parameter
+            tts = TTS(model_name=model_name, progress_bar=False)
+            # Move the model to the determined device
+            tts.to(device)
             loaded_models[model_name] = tts
         else:
             tts = loaded_models[model_name]
