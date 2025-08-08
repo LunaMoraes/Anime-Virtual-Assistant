@@ -10,6 +10,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Map;
+import core.AppState;
 
 /**
  * Handles all communication with the Python VITS TTS API server.
@@ -96,6 +97,7 @@ public class TtsApiClient {
                     uiCallback.showSpeakingImage();
                     uiCallback.showSpeechBubble(text);
                 }
+                AppState.isSpeaking = true;
 
                 byte[] audioBytes = response.body().readAllBytes();
                 InputStream byteArrayInputStream = new ByteArrayInputStream(audioBytes);
@@ -116,13 +118,14 @@ public class TtsApiClient {
                         Clip clip = AudioSystem.getClip();
                         final Object lock = new Object();
 
-                        clip.addLineListener(event -> {
+            clip.addLineListener(event -> {
                             if (event.getType() == LineEvent.Type.STOP) {
                                 // Revert to static image and hide bubble when TTS finishes
                                 if (uiCallback != null) {
                                     uiCallback.showStaticImage();
                                     uiCallback.hideSpeechBubble();
                                 }
+                AppState.isSpeaking = false;
                                 synchronized (lock) {
                                     lock.notify();
                                 }
@@ -144,6 +147,7 @@ public class TtsApiClient {
                     uiCallback.showStaticImage();
                     uiCallback.hideSpeechBubble();
                 }
+                AppState.isSpeaking = false;
             }
         } catch (Exception e) {
             System.err.println("Error during TTS playback: " + e.getMessage());
@@ -153,6 +157,7 @@ public class TtsApiClient {
                 uiCallback.showStaticImage();
                 uiCallback.hideSpeechBubble();
             }
+            AppState.isSpeaking = false;
         }
     }
 }

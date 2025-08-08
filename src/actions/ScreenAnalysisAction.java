@@ -44,7 +44,7 @@ public class ScreenAnalysisAction implements Action {
             return ActionResult.skipped("Already processing or not running");
         }
 
-        if (!isProcessing.compareAndSet(false, true)) {
+    if (!isProcessing.compareAndSet(false, true)) {
             return ActionResult.skipped("Processing already in progress");
         }
 
@@ -74,7 +74,10 @@ public class ScreenAnalysisAction implements Action {
                 screenshotBuffer.clear();
             }
 
-            // Process in background executor to avoid blocking and prevent thread leaks
+        // Mark global processing state so the thinking loop can pause while we work
+        AppState.isActionProcessing = true;
+
+        // Process in background executor to avoid blocking and prevent thread leaks
             PROCESSOR.submit(() -> {
                 try {
                     processAndRespond(images.get(0));
@@ -83,6 +86,7 @@ public class ScreenAnalysisAction implements Action {
                     e.printStackTrace();
                 } finally {
                     isProcessing.set(false);
+            AppState.isActionProcessing = false;
                 }
             });
 

@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import core.AppState;
 
 /**
  * The thinking engine that analyzes the current situation and decides which actions to execute.
@@ -23,6 +24,10 @@ public class ThinkingEngine {
      * This is called periodically by the scheduler.
      */
     public void think() {
+        // If an action is still processing or TTS is speaking, skip this cycle entirely
+        if (AppState.isActionProcessing || AppState.isSpeaking) {
+            return;
+        }
         if (!isThinking.compareAndSet(false, true)) {
             return; // Already thinking, skip this cycle
         }

@@ -14,6 +14,10 @@ public class AppState {
     // --- Essential Application State ---
     public static volatile boolean isRunning = false;
     public static volatile boolean isTtsApiAvailable = false;
+    // Indicates when an action (e.g., screen analysis) is performing background work
+    public static volatile boolean isActionProcessing = false;
+    // Indicates when TTS playback is ongoing
+    public static volatile boolean isSpeaking = false;
 
     // --- UI Configuration ---
     public static final String FALLBACK_IMAGE_URL = "";
