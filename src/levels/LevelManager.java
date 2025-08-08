@@ -20,6 +20,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import javax.swing.SwingUtilities;
 
 /**
  * LevelManager loads the attribute list and manages the user's levels/skills.
@@ -34,6 +36,7 @@ public class LevelManager {
 
     private static List<String> attributes = Collections.emptyList();
     private static UserLevels userLevels = new UserLevels();
+    private static final List<Runnable> listeners = new ArrayList<>();
 
     public static void initialize() {
     attributes = loadAttributes();
@@ -229,6 +232,7 @@ public class LevelManager {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_LEVELS_PATH.toFile(), StandardCharsets.UTF_8))) {
                 GSON.toJson(levels, writer);
             }
+            notifyLevelsChanged();
         } catch (Exception e) {
             System.err.println("Failed to save userLevels.json: " + e.getMessage());
         }
@@ -270,5 +274,29 @@ public class LevelManager {
             if (a.equalsIgnoreCase(name)) return a;
         }
         return null;
+    }
+
+    // --- Listener support for UI updates ---
+    public static void addLevelsListener(Runnable listener) {
+        if (listener == null) return;
+        synchronized (listeners) { listeners.add(listener); }
+    }
+
+    public static void removeLevelsListener(Runnable listener) {
+        if (listener == null) return;
+        synchronized (listeners) { listeners.remove(listener); }
+    }
+
+    private static void notifyLevelsChanged() {
+        java.util.List<Runnable> copy;
+        synchronized (listeners) { copy = new ArrayList<>(listeners); }
+        if (copy.isEmpty()) return;
+        Runnable dispatcher = () -> {
+            for (Runnable r : copy) {
+                try { r.run(); } catch (Throwable ignored) {}
+            }
+        };
+        if (SwingUtilities.isEventDispatchThread()) dispatcher.run();
+        else SwingUtilities.invokeLater(dispatcher);
     }
 }

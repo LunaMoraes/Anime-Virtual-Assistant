@@ -1,6 +1,7 @@
 package gui.settings;
 
 import levels.LevelManager;
+import levels.SkillInfo;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,62 +11,81 @@ import java.util.Map;
  * Displays user profile: attributes XP and available skills.
  */
 public class ProfilePanel extends JPanel {
+    private final JPanel content;
+
     public ProfilePanel() {
         super();
         setOpaque(false);
-        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setLayout(new BorderLayout());
 
-        add(createAttributesSection());
-        add(Box.createVerticalStrut(20));
-        add(createSkillsSection());
-        add(Box.createVerticalGlue());
+        content = new JPanel();
+        content.setOpaque(false);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        JScrollPane scroll = new JScrollPane(content);
+        scroll.setBorder(null);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        add(scroll, BorderLayout.CENTER);
+
+        rebuild();
+
+        // Live updates when levels change
+        LevelManager.addLevelsListener(this::rebuild);
     }
 
-    private JComponent createAttributesSection() {
-        JPanel panel = new JPanel();
-        panel.setOpaque(false);
-        panel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(4, 4, 4, 4);
-        gbc.anchor = GridBagConstraints.WEST;
+    private void rebuild() {
+        content.removeAll();
 
-        Map<String, Integer> xpMap = LevelManager.getAttributeXp();
-        int row = 0;
-        for (Map.Entry<String, Integer> e : xpMap.entrySet()) {
-            JLabel name = styledLabel(e.getKey() + ":");
-            JLabel value = styledLabel(String.valueOf(e.getValue()));
-            gbc.gridx = 0; gbc.gridy = row; panel.add(name, gbc);
-            gbc.gridx = 1; panel.add(value, gbc);
-            row++;
-        }
+        // Title
+        JLabel title = styledLabel("Profile");
+        title.setFont(new Font("Arial", Font.BOLD, 14));
+        content.add(title);
+        content.add(Box.createVerticalStrut(8));
 
-        if (xpMap.isEmpty()) {
-            JLabel empty = styledLabel("No attributes found.");
-            panel.add(empty);
-        }
+        Map<String, Integer> attrLevels = LevelManager.getAttributeXp();
+        Map<String, SkillInfo> skills = LevelManager.getAvailableSkills();
 
-        return panel;
-    }
-
-    private JComponent createSkillsSection() {
-        JPanel panel = new JPanel();
-        panel.setOpaque(false);
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-
-        java.util.Map<String, levels.SkillInfo> skills = LevelManager.getAvailableSkills();
-        if (skills == null || skills.isEmpty()) {
-            JLabel empty = styledLabel("No skills available yet.");
-            panel.add(empty);
+        if (attrLevels == null || attrLevels.isEmpty()) {
+            content.add(styledLabel("No attributes found."));
         } else {
-            for (var entry : skills.entrySet()) {
-                String name = entry.getKey();
-                levels.SkillInfo info = entry.getValue();
-                String line = String.format("• %s  —  attribute: %s, xp: %d", name, info.getAttribute(), info.getExperience());
-                panel.add(styledLabel(line));
+            for (Map.Entry<String, Integer> e : attrLevels.entrySet()) {
+                String attr = e.getKey();
+                Integer lvl = e.getValue();
+
+                // Attribute header
+                JPanel row = new JPanel(new BorderLayout());
+                row.setOpaque(false);
+                JLabel attrLabel = styledLabel(attr + ": " + (lvl != null ? lvl : 0));
+                attrLabel.setFont(new Font("Arial", Font.BOLD, 12));
+                row.add(attrLabel, BorderLayout.NORTH);
+
+                // Nested skills for this attribute
+                JPanel nested = new JPanel();
+                nested.setOpaque(false);
+                nested.setLayout(new BoxLayout(nested, BoxLayout.Y_AXIS));
+                int count = 0;
+                if (skills != null) {
+                    for (var s : skills.entrySet()) {
+                        String name = s.getKey();
+                        SkillInfo info = s.getValue();
+                        if (info != null && info.getAttribute() != null && info.getAttribute().equalsIgnoreCase(attr)) {
+                            JLabel item = styledLabel("    • " + name + ": " + info.getExperience() + "xp");
+                            nested.add(item);
+                            count++;
+                        }
+                    }
+                }
+                if (count == 0) nested.add(styledLabel("    (no skills yet)"));
+
+                row.add(nested, BorderLayout.CENTER);
+                row.setBorder(BorderFactory.createEmptyBorder(4, 4, 8, 4));
+                content.add(row);
             }
         }
 
-        return panel;
+        content.add(Box.createVerticalGlue());
+        content.revalidate();
+        content.repaint();
     }
 
     private JLabel styledLabel(String text) {
