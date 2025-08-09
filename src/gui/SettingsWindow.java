@@ -174,8 +174,8 @@ public class SettingsWindow extends JFrame {
         mainTab.setOpaque(false); // Make transparent to show background
         mainTab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Voice section
-        JPanel voiceSection = createSection("Assistant Voice", new VoicePanel(voices));
+    // Voice section (kept simple; TTS toggle now lives in Settings tab)
+    JPanel voiceSection = createSection("Assistant Voice", new VoicePanel(voices));
         mainTab.add(voiceSection);
         mainTab.add(Box.createVerticalStrut(20));
 
@@ -241,6 +241,11 @@ public class SettingsWindow extends JFrame {
         JPanel languageSection = createSection("Language", new LanguagePanel());
         settingsTab.add(languageSection);
         settingsTab.add(Box.createVerticalStrut(20));
+
+    // Speech section (Enable/Disable TTS)
+    JPanel speechSection = createSection("Voice & TTS", new gui.settings.TtsTogglePanel());
+    settingsTab.add(speechSection);
+    settingsTab.add(Box.createVerticalStrut(20));
 
         // Multimodal section
         JPanel multimodalSection = createSection("Multimodal Model", new MultimodalPanel(this::refreshSettingsTab));
@@ -382,8 +387,12 @@ public class SettingsWindow extends JFrame {
                 Main.assistantCore.stopProcessing();
                 startStopButton.setText("Start Assistant");
             } else {
-                // Check if TTS API is available before starting
-                if (!AppState.isTtsApiAvailable) {
+                // Check if TTS API is available before starting (only when TTS is enabled)
+                if (!AppState.useTTS()) {
+                    // TTS disabled: start without checking the API
+                    Main.assistantCore.startProcessing();
+                    startStopButton.setText("Stop Assistant");
+                } else if (!AppState.isTtsApiAvailable) {
                     // TTS wasn't available at startup, check again now
                     if (TtsApiClient.isApiAvailable()) {
                         // TTS is now available, update everything

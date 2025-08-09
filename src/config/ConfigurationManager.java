@@ -129,6 +129,10 @@ public class ConfigurationManager {
         return userSettings != null && userSettings.isUseApiMultimodal();
     }
 
+    public static boolean useTTS() {
+        return userSettings != null && userSettings.isUseTTS();
+    }
+
     // === User Settings Updates ===
 
     public static void setSelectedTtsVoice(String voice) {
@@ -176,6 +180,13 @@ public class ConfigurationManager {
     public static void setUseApiMultimodal(boolean useApi) {
         if (userSettings != null) {
             userSettings.setUseApiMultimodal(useApi);
+            saveUserSettings();
+        }
+    }
+
+    public static void setUseTTS(boolean useTTS) {
+        if (userSettings != null) {
+            userSettings.setUseTTS(useTTS);
             saveUserSettings();
         }
     }

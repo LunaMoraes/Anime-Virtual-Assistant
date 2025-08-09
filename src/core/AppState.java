@@ -140,4 +140,13 @@ public class AppState {
     public static boolean useApiMultimodal() {
         return ConfigurationManager.useApiMultimodal();
     }
+
+    public static boolean useTTS() {
+        return ConfigurationManager.useTTS();
+    }
+
+    public static void setUseTTS(boolean useTTS) {
+        ConfigurationManager.setUseTTS(useTTS);
+        System.out.println("TTS " + (useTTS ? "Enabled" : "Disabled"));
+    }
 }

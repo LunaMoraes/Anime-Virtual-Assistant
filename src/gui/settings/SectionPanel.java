@@ -20,9 +20,12 @@ public class SectionPanel extends JPanel {
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(Color.WHITE);
-        add(titleLabel, BorderLayout.NORTH);
-
-        add(Box.createVerticalStrut(10), BorderLayout.CENTER);
-        add(content, BorderLayout.SOUTH);
+    add(titleLabel, BorderLayout.NORTH);
+    JPanel body = new JPanel();
+    body.setOpaque(false);
+    body.setLayout(new BorderLayout());
+    body.add(Box.createVerticalStrut(10), BorderLayout.NORTH);
+    body.add(content, BorderLayout.CENTER);
+    add(body, BorderLayout.CENTER);
     }
 }

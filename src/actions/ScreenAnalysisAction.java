@@ -143,8 +143,22 @@ public class ScreenAnalysisAction implements Action {
             System.out.println("Spoken (after stripping brackets): " + finalResponseToSpeak);
             System.out.println("Speaking: " + finalResponseToSpeak);
 
-            // Speak the response - TtsApiClient will handle UI updates automatically
-            TtsApiClient.speak(finalResponseToSpeak, selectedTtsVoice, 1.0, selectedLanguage);
+            if (AppState.useTTS()) {
+                // Speak the response - TtsApiClient will handle UI updates automatically
+                TtsApiClient.speak(finalResponseToSpeak, selectedTtsVoice, 1.0, selectedLanguage);
+            } else {
+                // TTS disabled: just show the speech bubble temporarily without audio
+                final api.TtsApiClient.UICallback cb = TtsApiClient.getUICallback();
+                if (cb != null) {
+                    cb.showSpeechBubble(finalResponseToSpeak);
+                    cb.showStaticImage();
+                    // Hide bubble after a short delay so UI doesn't stick
+                    new Thread(() -> {
+                        try { Thread.sleep(Math.min(5000, 500 + finalResponseToSpeak.length() * 40)); } catch (InterruptedException ignored) {}
+                        try { cb.hideSpeechBubble(); } catch (Throwable ignored) {}
+                    }, "bubble-timer").start();
+                }
+            }
 
             // Save to memory
             PersonalityManager.saveResponseToMemory(finalResponseToSpeak);

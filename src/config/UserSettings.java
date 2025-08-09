@@ -19,6 +19,7 @@ public class UserSettings {
     private boolean useApiAnalysis = true;
     private boolean useMultimodal = true;
     private boolean useApiMultimodal = true;
+    private boolean useTTS = true;
 
     // Default constructor
     public UserSettings() {}
@@ -124,5 +125,13 @@ public class UserSettings {
 
     public void setUseApiMultimodal(boolean useApiMultimodal) {
         this.useApiMultimodal = useApiMultimodal;
+    }
+
+    public boolean isUseTTS() {
+        return useTTS;
+    }
+
+    public void setUseTTS(boolean useTTS) {
+        this.useTTS = useTTS;
     }
 }

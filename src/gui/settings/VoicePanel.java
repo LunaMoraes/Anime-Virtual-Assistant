@@ -16,6 +16,7 @@ public class VoicePanel extends JPanel {
         voiceSelector = new JComboBox<>(voices);
         voiceSelector.setSelectedItem(AppState.selectedTtsCharacterVoice);
         voiceSelector.setPreferredSize(new Dimension(200, 30));
+    voiceSelector.setEnabled(AppState.useTTS());
         add(voiceSelector);
 
         voiceSelector.addItemListener(e -> {

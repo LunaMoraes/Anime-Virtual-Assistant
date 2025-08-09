@@ -21,10 +21,14 @@ public class ProfilePanel extends JPanel {
         content = new JPanel();
         content.setOpaque(false);
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        JScrollPane scroll = new JScrollPane(content);
-        scroll.setBorder(null);
-        scroll.setOpaque(false);
-        scroll.getViewport().setOpaque(false);
+    JScrollPane scroll = new JScrollPane(
+        content,
+        JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+    scroll.setBorder(null);
+    scroll.setOpaque(false);
+    scroll.getViewport().setOpaque(false);
+    scroll.getVerticalScrollBar().setUnitIncrement(20);
         add(scroll, BorderLayout.CENTER);
 
         rebuild();
@@ -83,9 +87,11 @@ public class ProfilePanel extends JPanel {
             }
         }
 
-        content.add(Box.createVerticalGlue());
-        content.revalidate();
-        content.repaint();
+    content.add(Box.createVerticalGlue());
+    // Let layout recompute preferred sizes for proper scroll behavior
+    content.setPreferredSize(null);
+    content.revalidate();
+    content.repaint();
     }
 
     private JLabel styledLabel(String text) {

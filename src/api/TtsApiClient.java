@@ -40,6 +40,13 @@ public class TtsApiClient {
     }
 
     /**
+     * Returns the current UI callback, if any. Useful for non-audio display flows.
+     */
+    public static UICallback getUICallback() {
+        return uiCallback;
+    }
+
+    /**
      * Checks if the TTS API server is running and available
      */
     public static boolean isApiAvailable() {
