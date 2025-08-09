@@ -16,7 +16,8 @@ public class Personality {
     // These fields are set programmatically
     private transient String staticImagePath;
     private transient String speakingImagePath;
-    private transient String lastResponse = ""; // Short-term memory for the last spoken line
+    private transient String lastResponse = ""; // Back-compat single last line
+    private transient java.util.Deque<String> lastResponses = new java.util.ArrayDeque<>(); // keep last 5
 
     // Default constructor for Gson
     public Personality() {}
@@ -75,6 +76,19 @@ public class Personality {
 
     public void setLastResponse(String lastResponse) {
         this.lastResponse = lastResponse;
+    }
+
+    public java.util.List<String> getLastResponses() {
+        return new java.util.ArrayList<>(lastResponses);
+    }
+
+    public void addResponse(String response) {
+        if (response == null || response.isBlank()) return;
+        lastResponse = response;
+        lastResponses.addLast(response);
+        while (lastResponses.size() > 5) {
+            lastResponses.removeFirst();
+        }
     }
 
     @Override

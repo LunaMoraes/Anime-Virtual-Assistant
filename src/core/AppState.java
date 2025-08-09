@@ -36,6 +36,13 @@ public class AppState {
         // Initialize configuration management
         ConfigurationManager.initialize();
 
+        // Initialize persistent memory store (creates/loads data/system/userMemory.json)
+        try {
+            config.MemoryStore.initialize();
+        } catch (Throwable t) {
+            System.err.println("Memory store failed to initialize: " + t.getMessage());
+        }
+
         // Load personalities
         PersonalityManager.loadPersonalities();
 

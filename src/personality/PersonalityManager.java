@@ -126,11 +126,18 @@ public class PersonalityManager {
     }
 
     /**
+     * Gets the last up to 5 responses, newest last.
+     */
+    public static java.util.List<String> getLastResponses() {
+        return selectedPersonality != null ? selectedPersonality.getLastResponses() : java.util.List.of();
+    }
+
+    /**
      * Saves a response to the selected personality's memory.
      */
     public static void saveResponseToMemory(String response) {
         if (selectedPersonality != null) {
-            selectedPersonality.setLastResponse(response);
+            selectedPersonality.addResponse(response);
             System.out.println("Saved to memory: \"" + response + "\"");
         }
     }

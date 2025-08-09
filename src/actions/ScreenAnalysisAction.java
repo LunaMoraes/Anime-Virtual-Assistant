@@ -188,17 +188,32 @@ public class ScreenAnalysisAction implements Action {
     }
 
     private static String getString(String context, String personalityPrompt) {
-        String lastResponse = PersonalityManager.getLastResponse();
-
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(String.format(personalityPrompt, context.replace("\"", "'")));
         
         promptBuilder.append(ConfigurationManager.getSpeakTaskPrompt());
 
-        if (lastResponse != null && !lastResponse.isEmpty()) {
-            promptBuilder.append(" Your previous comment was: \"");
-            promptBuilder.append(lastResponse.replace("\"", "'"));
-            promptBuilder.append("\". Your new comment MUST be different, do not make it repetitive.");
+        // Add recent context: last five comments and memories
+        java.util.List<String> lastFive = personality.PersonalityManager.getLastResponses();
+        if (lastFive != null && !lastFive.isEmpty()) {
+            promptBuilder.append("\nYour 5 past comments are:\n");
+            for (String r : lastFive) {
+                if (r != null && !r.isBlank()) {
+                    promptBuilder.append("- ").append(r.replace("\"", "'"))
+                                 .append("\n");
+                }
+            }
+        }
+        promptBuilder.append("\". Your new comment MUST be different, do not make it repetitive.");
+        String stm = config.MemoryStore.getShortTerm();
+        String ltm = config.MemoryStore.getLongTerm();
+        if (stm != null && !stm.isBlank()) {
+            promptBuilder.append("Short term memory to add context: ").append(stm.replace("\"", "'"))
+                         .append("\n");
+        }
+        if (ltm != null && !ltm.isBlank()) {
+            promptBuilder.append("Long term memory to add context: ").append(ltm.replace("\"", "'"))
+                         .append("\n");
         }
 
         return promptBuilder.toString();
@@ -261,25 +276,45 @@ public class ScreenAnalysisAction implements Action {
             // levels:add_exp_on_skill(skill_name)
             // levels:add_skill(skill_name, attribute)
             String lower = content.toLowerCase();
-            if (!lower.startsWith("levels:")) return;
-            String cmd = content.substring("levels:".length()).trim();
-            if (cmd.startsWith("add_exp_on_skill")) {
-                int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
-                if (lp != -1 && rp > lp) {
-                    String arg = cmd.substring(lp + 1, rp).trim();
-                    String skill = stripQuotes(arg);
-                    System.out.println("Dispatch: levels.addExpOnSkill(" + skill + ")");
-                    levels.LevelManager.addExpOnSkill(skill, 1);
+            if (lower.startsWith("levels:")) {
+                String cmd = content.substring("levels:".length()).trim();
+                if (cmd.startsWith("add_exp_on_skill")) {
+                    int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+                    if (lp != -1 && rp > lp) {
+                        String arg = cmd.substring(lp + 1, rp).trim();
+                        String skill = stripQuotes(arg);
+                        System.out.println("Dispatch: levels.addExpOnSkill(" + skill + ")");
+                        levels.LevelManager.addExpOnSkill(skill, 1);
+                    }
+                } else if (cmd.startsWith("add_skill")) {
+                    int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+                    if (lp != -1 && rp > lp) {
+                        String args = cmd.substring(lp + 1, rp);
+                        String[] parts = args.split(",");
+                        String skill = parts.length > 0 ? stripQuotes(parts[0].trim()) : null;
+                        String attr = parts.length > 1 ? stripQuotes(parts[1].trim()) : null;
+                        System.out.println("Dispatch: levels.addSkill(" + skill + ", " + attr + ")");
+                        levels.LevelManager.addSkill(skill, attr);
+                    }
                 }
-            } else if (cmd.startsWith("add_skill")) {
-                int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
-                if (lp != -1 && rp > lp) {
-                    String args = cmd.substring(lp + 1, rp);
-                    String[] parts = args.split(",");
-                    String skill = parts.length > 0 ? stripQuotes(parts[0].trim()) : null;
-                    String attr = parts.length > 1 ? stripQuotes(parts[1].trim()) : null;
-                    System.out.println("Dispatch: levels.addSkill(" + skill + ", " + attr + ")");
-                    levels.LevelManager.addSkill(skill, attr);
+            } else if (lower.startsWith("memory:")) {
+                String cmd = content.substring("memory:".length()).trim();
+                if (cmd.startsWith("write_short_term")) {
+                    int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+                    if (lp != -1 && rp > lp) {
+                        String payload = cmd.substring(lp + 1, rp).trim();
+                        payload = stripQuotes(payload);
+                        config.MemoryStore.setShortTerm(payload);
+                        System.out.println("Dispatch: memory.write_short_term updated.");
+                    }
+                } else if (cmd.startsWith("write_long_term")) {
+                    int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+                    if (lp != -1 && rp > lp) {
+                        String payload = cmd.substring(lp + 1, rp).trim();
+                        payload = stripQuotes(payload);
+                        config.MemoryStore.setLongTerm(payload);
+                        System.out.println("Dispatch: memory.write_long_term updated.");
+                    }
                 }
             }
         } catch (Exception ignored) {}
@@ -312,17 +347,33 @@ public class ScreenAnalysisAction implements Action {
     }
 
     private static String getFinalPrompt(String personalityPrompt) {
-        String lastResponse = PersonalityManager.getLastResponse();
-
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(personalityPrompt);
         
         promptBuilder.append(ConfigurationManager.getSpeakTaskPrompt());
 
-        if (lastResponse != null && !lastResponse.isEmpty()) {
-            promptBuilder.append(" Your previous comment was: \"");
-            promptBuilder.append(lastResponse.replace("\"", "'"));
-            promptBuilder.append("\". Your new comment MUST be different.");
+        // Add recent context: last five comments and memories
+        java.util.List<String> lastFive = personality.PersonalityManager.getLastResponses();
+        if (lastFive != null && !lastFive.isEmpty()) {
+            promptBuilder.append("\nYour 5 past comments are:\n");
+            for (String r : lastFive) {
+                if (r != null && !r.isBlank()) {
+                    promptBuilder.append("- ").append(r.replace("\"", "'"))
+                                 .append("\n");
+                }
+            }
+        }
+        promptBuilder.append("\". Your new comment MUST be different, do not make it repetitive.");
+
+        String stm = config.MemoryStore.getShortTerm();
+        String ltm = config.MemoryStore.getLongTerm();
+        if (stm != null && !stm.isBlank()) {
+            promptBuilder.append("This is your Short term memory to add context: ").append(stm.replace("\"", "'"))
+                         .append("\n");
+        }
+        if (ltm != null && !ltm.isBlank()) {
+            promptBuilder.append("This is your Long term memory to add context: ").append(ltm.replace("\"", "'"))
+                         .append("\n");
         }
 
         return promptBuilder.toString();

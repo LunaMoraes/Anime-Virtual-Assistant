@@ -49,6 +49,8 @@ public class ThinkingEngine {
      */
     private void analyzeSituationAndAct() {
         ActionContext context = new ActionContext();
+        int divisor = AppState.getChatFrequencyDivisor();
+        List<String> availableActions = actionManager.getAvailableActions(context);
 
         // Increment global tick counter at each analysis cycle
         AppState.tickCounter++;
@@ -59,19 +61,10 @@ public class ThinkingEngine {
             context.put("screenshot", screenshot);
         }
 
-
-        // Now execute the screen analysis action which will assemble the full LLM prompt
-        // In the future, this could analyze various conditions:
-        // - Time of day
-        // - User activity patterns
-        // - System state
-        // - External triggers
-        // - User preferences
-
         // First, let task-contributor actions add their tasks to the context.
         // These actions should be lightweight and synchronous.
 
-        // Example: levels_task contributes level system task + payload.
+        // levels_task contributes level system task + payload.
         if (actionManager.hasAction("levels_task")) {
             ActionResult r = actionManager.executeAction("levels_task", context);
             if (r.isFailure()) {
@@ -79,12 +72,23 @@ public class ThinkingEngine {
             }
         }
 
-        List<String> availableActions = actionManager.getAvailableActions(context);
-
         // Determine if this tick should trigger a chat based on frequency
-        int divisor = AppState.getChatFrequencyDivisor();
         boolean shouldChatThisTick = divisor <= 1 || (AppState.tickCounter % divisor == 0);
 
+        // Inform memory_task whether screen_analysis will run this tick, so it can decide to unify or run standalone
+        boolean willRunScreenAnalysis = availableActions.contains("screen_analysis") && shouldChatThisTick;
+        context.put("will_run_screen_analysis", willRunScreenAnalysis);
+
+        // memory_task contributes memory system task + payload and may run standalone every 5 ticks
+        if (actionManager.hasAction("memory_task") && (AppState.tickCounter % 5 == 0)) {
+            ActionResult r = actionManager.executeAction("memory_task", context);
+            if (r.isFailure()) {
+                System.err.println("memory_task failed: " + r.getMessage());
+            }
+        }
+
+
+        // Now execute the screen analysis action which will assemble the full LLM prompt
         if (availableActions.contains("screen_analysis") && shouldChatThisTick) {
             ActionResult result = actionManager.executeAction("screen_analysis", context);
 
