@@ -133,6 +133,20 @@ public class ConfigurationManager {
         return userSettings != null && userSettings.isUseTTS();
     }
 
+    public static String getChatFrequency() {
+        return userSettings != null ? userSettings.getChatFrequency() : "medium";
+    }
+
+    public static int getChatFrequencyDivisor() {
+        String f = getChatFrequency();
+        if (f == null) return 3;
+        switch (f.toLowerCase()) {
+            case "frequent": return 2;
+            case "scarse": return 5;
+            default: return 3; // medium
+        }
+    }
+
     // === User Settings Updates ===
 
     public static void setSelectedTtsVoice(String voice) {
@@ -187,6 +201,13 @@ public class ConfigurationManager {
     public static void setUseTTS(boolean useTTS) {
         if (userSettings != null) {
             userSettings.setUseTTS(useTTS);
+            saveUserSettings();
+        }
+    }
+
+    public static void setChatFrequency(String frequency) {
+        if (userSettings != null) {
+            userSettings.setChatFrequency(frequency);
             saveUserSettings();
         }
     }

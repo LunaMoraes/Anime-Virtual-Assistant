@@ -50,21 +50,15 @@ public class ThinkingEngine {
     private void analyzeSituationAndAct() {
         ActionContext context = new ActionContext();
 
+        // Increment global tick counter at each analysis cycle
+        AppState.tickCounter++;
+        System.err.println("Current Tick: " + AppState.tickCounter);
         // Capture screenshot first - this will be used by multiple actions
         BufferedImage screenshot = captureScreenshot();
         if (screenshot != null) {
             context.put("screenshot", screenshot);
         }
 
-        // First, let task-contributor actions add their tasks to the context.
-        // These actions should be lightweight and synchronous.
-        // Example: levels_task contributes level system task + payload.
-        if (actionManager.hasAction("levels_task")) {
-            ActionResult r = actionManager.executeAction("levels_task", context);
-            if (r.isFailure()) {
-                System.err.println("levels_task failed: " + r.getMessage());
-            }
-        }
 
         // Now execute the screen analysis action which will assemble the full LLM prompt
         // In the future, this could analyze various conditions:
@@ -74,9 +68,24 @@ public class ThinkingEngine {
         // - External triggers
         // - User preferences
 
+        // First, let task-contributor actions add their tasks to the context.
+        // These actions should be lightweight and synchronous.
+
+        // Example: levels_task contributes level system task + payload.
+        if (actionManager.hasAction("levels_task")) {
+            ActionResult r = actionManager.executeAction("levels_task", context);
+            if (r.isFailure()) {
+                System.err.println("levels_task failed: " + r.getMessage());
+            }
+        }
+
         List<String> availableActions = actionManager.getAvailableActions(context);
 
-        if (availableActions.contains("screen_analysis")) {
+        // Determine if this tick should trigger a chat based on frequency
+        int divisor = AppState.getChatFrequencyDivisor();
+        boolean shouldChatThisTick = divisor <= 1 || (AppState.tickCounter % divisor == 0);
+
+        if (availableActions.contains("screen_analysis") && shouldChatThisTick) {
             ActionResult result = actionManager.executeAction("screen_analysis", context);
 
             if (result.isFailure()) {
@@ -91,11 +100,6 @@ public class ThinkingEngine {
             System.out.println("No suitable actions available at this time");
         }
 
-        // Future expansion could include:
-        // - executeNoteTakingActions(context);
-        // - executeSchedulingActions(context);
-        // - executeMaintenanceActions(context);
-        // - executeUserInteractionActions(context);
     }
 
     /**

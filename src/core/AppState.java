@@ -18,6 +18,8 @@ public class AppState {
     public static volatile boolean isActionProcessing = false;
     // Indicates when TTS playback is ongoing
     public static volatile boolean isSpeaking = false;
+    // Global tick counter for thinking cycles
+    public static volatile long tickCounter = 0L;
 
     // --- UI Configuration ---
     public static final String FALLBACK_IMAGE_URL = "";
@@ -68,6 +70,11 @@ public class AppState {
         ConfigurationManager.setSelectedTtsVoice(selectedTtsCharacterVoice);
         ConfigurationManager.setSelectedLanguage(selectedLanguage);
     }
+
+    // === Chat frequency accessors ===
+    public static String getChatFrequency() { return ConfigurationManager.getChatFrequency(); }
+    public static void setChatFrequency(String freq) { ConfigurationManager.setChatFrequency(freq); }
+    public static int getChatFrequencyDivisor() { return ConfigurationManager.getChatFrequencyDivisor(); }
 
     // === Personality Delegation Methods ===
 

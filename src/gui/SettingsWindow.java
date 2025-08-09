@@ -237,14 +237,19 @@ public class SettingsWindow extends JFrame {
         settingsTab.setOpaque(false); // Make transparent to show background
         settingsTab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Language section
-        JPanel languageSection = createSection("Language", new LanguagePanel());
+    // Language section
+    JPanel languageSection = createSection("Language", new LanguagePanel());
         settingsTab.add(languageSection);
         settingsTab.add(Box.createVerticalStrut(20));
 
     // Speech section (Enable/Disable TTS)
     JPanel speechSection = createSection("Voice & TTS", new gui.settings.TtsTogglePanel());
     settingsTab.add(speechSection);
+    settingsTab.add(Box.createVerticalStrut(20));
+
+    // Chat Frequency section
+    JPanel chatFreqSection = createSection("Chat Frequency", new gui.settings.ChatFrequencyPanel());
+    settingsTab.add(chatFreqSection);
     settingsTab.add(Box.createVerticalStrut(20));
 
         // Multimodal section

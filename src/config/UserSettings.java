@@ -20,6 +20,7 @@ public class UserSettings {
     private boolean useMultimodal = true;
     private boolean useApiMultimodal = true;
     private boolean useTTS = true;
+    private String chatFrequency = "medium"; // frequent|medium|scarse
 
     // Default constructor
     public UserSettings() {}
@@ -133,5 +134,13 @@ public class UserSettings {
 
     public void setUseTTS(boolean useTTS) {
         this.useTTS = useTTS;
+    }
+
+    public String getChatFrequency() {
+        return chatFrequency;
+    }
+
+    public void setChatFrequency(String chatFrequency) {
+        this.chatFrequency = chatFrequency;
     }
 }
