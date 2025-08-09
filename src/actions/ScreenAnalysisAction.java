@@ -193,11 +193,9 @@ public class ScreenAnalysisAction implements Action {
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(String.format(personalityPrompt, context.replace("\"", "'")));
         
-        // Ensure the model knows how to format the spoken output
-        promptBuilder.append(" For this task, output your spoken sentence wrapped exactly as [speak:(content)].");
+        promptBuilder.append(ConfigurationManager.getSpeakTaskPrompt());
 
         if (lastResponse != null && !lastResponse.isEmpty()) {
-            promptBuilder.append("Do not use special characters, formatting or emojis in your response.");
             promptBuilder.append(" Your previous comment was: \"");
             promptBuilder.append(lastResponse.replace("\"", "'"));
             promptBuilder.append("\". Your new comment MUST be different, do not make it repetitive.");
@@ -319,11 +317,9 @@ public class ScreenAnalysisAction implements Action {
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(personalityPrompt);
         
-        // Ensure the model knows how to format the spoken output
-        promptBuilder.append(" For this task, output your spoken sentence wrapped exactly as [speak:(content)].");
+        promptBuilder.append(ConfigurationManager.getSpeakTaskPrompt());
 
         if (lastResponse != null && !lastResponse.isEmpty()) {
-            promptBuilder.append(" Do not use special characters, formatting or emojis in your response.");
             promptBuilder.append(" Your previous comment was: \"");
             promptBuilder.append(lastResponse.replace("\"", "'"));
             promptBuilder.append("\". Your new comment MUST be different.");

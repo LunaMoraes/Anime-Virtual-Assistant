@@ -8,6 +8,7 @@ package config;
 public class ConfigurationManager {
     private static SystemConfig systemConfig = null;
     private static UserSettings userSettings = null;
+    private static PromptsConfig promptsConfig = null;
 
     /**
      * Initializes all configuration files.
@@ -16,6 +17,7 @@ public class ConfigurationManager {
     public static void initialize() {
         loadSystemConfig();
         loadUserSettings();
+        loadPrompts();
     }
 
     /**
@@ -30,6 +32,13 @@ public class ConfigurationManager {
      */
     private static void loadUserSettings() {
         userSettings = UserSettings.loadUserSettings();
+    }
+
+    /**
+     * Loads prompts from prompts.json
+     */
+    private static void loadPrompts() {
+        promptsConfig = PromptsConfig.load();
     }
 
     /**
@@ -216,8 +225,8 @@ public class ConfigurationManager {
      * Gets the vision prompt from system configuration
      */
     public static String getVisionPrompt() {
-        return systemConfig != null && systemConfig.getPrompts() != null ?
-               systemConfig.getPrompts().getVisionPrompt() :
+    return promptsConfig != null && promptsConfig.getVisionPrompt() != null ?
+           promptsConfig.getVisionPrompt() :
                "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.";
     }
 
@@ -225,8 +234,8 @@ public class ConfigurationManager {
      * Gets the fallback prompt from system configuration
      */
     public static String getFallbackPrompt() {
-        return systemConfig != null && systemConfig.getPrompts() != null ?
-               systemConfig.getPrompts().getFallbackPrompt() :
+    return promptsConfig != null && promptsConfig.getFallbackPrompt() != null ?
+           promptsConfig.getFallbackPrompt() :
                "Based on this screen description: \"%s\" Give a SHORT comment (maximum 15 words).";
     }
 
@@ -234,8 +243,8 @@ public class ConfigurationManager {
      * Gets the multimodal prompt from system configuration
      */
     public static String getMultimodalPrompt() {
-        return systemConfig != null && systemConfig.getPrompts() != null ?
-               systemConfig.getPrompts().getMultimodalPrompt() :
+    return promptsConfig != null && promptsConfig.getMultimodalPrompt() != null ?
+           promptsConfig.getMultimodalPrompt() :
                "The attached screenshot shows a user activity, based on this and the later on personality quote give a response to the user.";
     }
 
@@ -243,8 +252,17 @@ public class ConfigurationManager {
      * Gets the global tasks instruction from system configuration (prompts.tasks)
      */
     public static String getTasksInstruction() {
-        return systemConfig != null && systemConfig.getPrompts() != null ?
-               systemConfig.getPrompts().getTasksInstruction() :
+    return promptsConfig != null && promptsConfig.getTasksInstruction() != null ?
+           promptsConfig.getTasksInstruction() :
                "You will receive a few tasks, for each task you will provide a different response. Use '[]' to wrap the response asked by the specific task. An ideal response will consist of multiple sequences of [] with the response inside for each.";
+    }
+
+    /**
+     * Gets the speak task prompt from prompts configuration
+     */
+    public static String getSpeakTaskPrompt() {
+    return promptsConfig != null && promptsConfig.getSpeakTaskPrompt() != null ?
+        promptsConfig.getSpeakTaskPrompt() :
+        " For this task, output your spoken sentence wrapped exactly as [speak:(content)].";
     }
 }
