@@ -40,6 +40,8 @@ https://www.oracle.com/br/java/technologies/downloads/
 https://www.python.org/downloads/release/python-3120/
 - **Python Dependencies:** Required libraries (e.g., `Flask`, `Coqui TTS`) must be installed.
 (requirements.txt)
+- **espeak-ng:** must be installed to use the COQUI TTS
+https://github.com/espeak-ng/espeak-ng/releases/tag/1.52.0
 ---
 
 ### Installation & Launch
