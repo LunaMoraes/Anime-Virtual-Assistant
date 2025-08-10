@@ -54,6 +54,47 @@ public class LevelManager {
 
     public static Map<String, SkillInfo> getAvailableSkills() { return userLevels.getAvailableSkills(); }
 
+    // --- Public helpers for UI/progress ---
+    /** Returns the total accumulated XP for a given attribute (sum of all associated skill XP). */
+    public static int getTotalXpForAttribute(String attribute) {
+        if (attribute == null) return 0;
+        String key = findAttributeKey(attribute);
+        if (key == null) key = attribute; // fall back to provided
+        int sum = 0;
+        for (Map.Entry<String, SkillInfo> e : userLevels.getAvailableSkills().entrySet()) {
+            SkillInfo info = e.getValue();
+            if (info != null && info.getAttribute() != null && info.getAttribute().equalsIgnoreCase(key)) {
+                sum += Math.max(0, info.getExperience());
+            }
+        }
+        return sum;
+    }
+
+    /** Returns XP remaining to next level for an attribute; 0 if at max level (99). */
+    public static int getXpToNextLevelForAttribute(String attribute) {
+        int total = getTotalXpForAttribute(attribute);
+        int lvl = xpToLevel(total);
+        if (lvl >= 99) return 0;
+        int[] th = getScaledThresholds();
+        int nextThreshold = th[Math.min(99, Math.max(1, lvl + 1))];
+        int rem = nextThreshold - total;
+        return Math.max(0, rem);
+    }
+
+    /** Returns 0..1 progress within the current level for an attribute. */
+    public static double getLevelProgressRatioForAttribute(String attribute) {
+        int total = getTotalXpForAttribute(attribute);
+        int lvl = xpToLevel(total);
+        if (lvl <= 0) return 0.0;
+        if (lvl >= 99) return 1.0;
+        int[] th = getScaledThresholds();
+        int cur = th[Math.max(1, lvl)];
+        int next = th[Math.min(99, lvl + 1)];
+        int den = Math.max(1, next - cur);
+        int num = Math.max(0, total - cur);
+        return Math.max(0.0, Math.min(1.0, (double) num / den));
+    }
+
     // --- Update operations ---
 
     /** Adds a new skill if not present and persists to disk. */
@@ -254,12 +295,74 @@ public class LevelManager {
                 attrTotals.put(key, attrTotals.getOrDefault(key, 0) + Math.max(0, info.getExperience()));
             }
         }
-        // Level formula: sumXP(attr)/10 (rounded down)
+        // Level formula: OSRS-like curve capped at 99 using computed thresholds scaled to target cap.
         Map<String, Integer> target = userLevels.getAttributesXp();
         for (String attr : attributes) {
-            int sum = attrTotals.getOrDefault(attr, 0);
-            target.put(attr, sum / 10);
+            int sumXp = Math.max(0, attrTotals.getOrDefault(attr, 0));
+            target.put(attr, xpToLevel(sumXp));
         }
+    }
+
+    // Convert total XP to a level in [0,99], 3,250,000 -> 99, ~halfway XP -> ~92
+    private static int xpToLevel(int xp) {
+        if (xp <= 0) return 0;
+        int[] thresholds = getScaledThresholds();
+        if (xp >= thresholds[99]) return 99;
+        // Binary search for highest level whose threshold <= xp
+        int lo = 1, hi = 99, ans = 1;
+        while (lo <= hi) {
+            int mid = (lo + hi) >>> 1;
+            if (thresholds[mid] <= xp) {
+                ans = mid;
+                lo = mid + 1;
+            } else {
+                hi = mid - 1;
+            }
+        }
+        // UX tweak: ensure any XP > 1 shows at least level 1
+        if (xp > 1 && ans == 0) return 1;
+        return Math.min(Math.max(ans, 0), 99);
+    }
+
+    // --- OSRS-like thresholds (computed, not hardcoded) ---
+    private static final int MAX_LEVEL = 99;
+    private static volatile int[] SCALED_THRESHOLDS; // lazily built
+
+    private static int[] getScaledThresholds() {
+        int[] local = SCALED_THRESHOLDS;
+        if (local == null) {
+            synchronized (LevelManager.class) {
+                local = SCALED_THRESHOLDS;
+                if (local == null) {
+                    SCALED_THRESHOLDS = local = buildScaledOsrsThresholds();
+                }
+            }
+        }
+        return local;
+    }
+
+    private static int[] buildScaledOsrsThresholds() {
+        // Build base OSRS thresholds using: diff(L) = floor((L-1) + 300*2^((L-1)/7));
+        // total(L) = sum_{k=2..L} diff(k) / 4; total(99) ~ 13,034,431
+        int[] base = new int[MAX_LEVEL + 1];
+        base[1] = 0;
+        int points = 0;
+        for (int lvl = 2; lvl <= MAX_LEVEL; lvl++) {
+            double inc = Math.floor((lvl - 1) + 300.0 * Math.pow(2.0, (lvl - 1) / 7.0));
+            points += (int) inc;
+            base[lvl] = points / 4;
+        }
+        int baseMax = base[MAX_LEVEL];
+        // Target cap set by design: 3,250,000 for level 99
+        double scale = 3_250_000.0 / Math.max(1, baseMax);
+        int[] out = new int[MAX_LEVEL + 1];
+        out[1] = 0;
+        for (int l = 2; l <= MAX_LEVEL; l++) {
+            int scaled = (int) Math.round(base[l] * scale);
+            if (scaled <= out[l - 1]) scaled = out[l - 1] + 1; // ensure strictly increasing
+            out[l] = scaled;
+        }
+        return out;
     }
 
     private static String inferDefaultAttribute() {

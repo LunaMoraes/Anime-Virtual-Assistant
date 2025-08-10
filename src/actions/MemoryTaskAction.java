@@ -52,12 +52,14 @@ public class MemoryTaskAction implements BracketAwareAction {
             // ALWAYS prepare the content - needed for both unified prompt AND tasks-only request
             StringBuilder sb = context.contains("other_task_content") ? context.get("other_task_content", StringBuilder.class) : new StringBuilder();
             if (sb == null) sb = new StringBuilder();
-            sb.append(tasksInstruction).append('\n');
-            sb.append("\n--- MEMORY TASK ---\n");
+            if (tasksInstruction != null && !tasksInstruction.isBlank()) {
+                sb.append(tasksInstruction).append('\n').append('\n');
+            }
             sb.append(instructions).append('\n');
-            sb.append("\nDATA=\n");
-            sb.append(new Gson().toJson(data));
-            sb.append("\n--- END OF MEMORY TASK ---\n");
+            // Standardized payload label
+            com.google.gson.JsonObject wrapper = new com.google.gson.JsonObject();
+            wrapper.add("memory", new com.google.gson.Gson().toJsonTree(data));
+            sb.append("DATA (JSON): ").append(wrapper.toString()).append('\n');
             context.put("other_task_content", sb);
 
             if (willRunSA) {

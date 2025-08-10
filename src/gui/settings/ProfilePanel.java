@@ -14,8 +14,9 @@ import java.util.Map;
 public class ProfilePanel extends JPanel {
 
     public ProfilePanel() {
-        super();
-        setOpaque(false);
+    super();
+    // Keep transparent to preserve themed background
+    setOpaque(false);
         setLayout(new BorderLayout(0, 10));
 
         rebuild();
@@ -59,9 +60,27 @@ public class ProfilePanel extends JPanel {
                 // Align the card to the left within its column
                 card.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-                JLabel attrLabel = styledLabel(attr + ": " + (lvl != null ? lvl : 0));
+                int shown = (lvl != null ? lvl : 0);
+                JPanel header = new JPanel();
+                header.setOpaque(false);
+                header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+                header.setAlignmentX(Component.LEFT_ALIGNMENT);
+                JLabel attrLabel = styledLabel(attr + ": " + shown + "/99");
                 attrLabel.setFont(new Font("Arial", Font.BOLD, 12));
-                card.add(attrLabel, BorderLayout.NORTH);
+                attrLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+                header.add(attrLabel);
+
+                if (shown > 0) {
+                    int xpLeft = LevelManager.getXpToNextLevelForAttribute(attr);
+                    double ratio = LevelManager.getLevelProgressRatioForAttribute(attr);
+                    LevelBar bar = new LevelBar(ratio);
+                    bar.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    bar.setToolTipText("XP to next level: " + xpLeft);
+                    header.add(Box.createRigidArea(new Dimension(0, 3)));
+                    header.add(bar);
+                }
+
+                card.add(header, BorderLayout.NORTH);
 
                 // Create the nested panel for skills under this attribute
                 JPanel nested = new JPanel();
@@ -116,5 +135,39 @@ public class ProfilePanel extends JPanel {
         l.setForeground(Color.WHITE);
         l.setFont(new Font("Arial", Font.PLAIN, 12));
         return l;
+    }
+
+    // Slim fixed-size progress bar with pink progress fill.
+    private static class LevelBar extends JComponent {
+        private double ratio; // 0..1
+        private static final int W = 120;
+        private static final int H = 6;
+        private static final Color BG = new Color(80, 70, 90, 160);
+        private static final Color FG = new Color(180, 100, 200, 230);
+        private static final Color BORDER = new Color(180, 100, 200, 200);
+
+        LevelBar(double ratio) { setRatio(ratio); setOpaque(false); }
+        void setRatio(double r) { this.ratio = Math.max(0.0, Math.min(1.0, r)); repaint(); }
+        @Override public Dimension getPreferredSize() { return new Dimension(W, H); }
+        @Override public Dimension getMinimumSize() { return getPreferredSize(); }
+        @Override public Dimension getMaximumSize() { return getPreferredSize(); }
+        @Override protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth(), h = getHeight();
+            // background
+            g2.setColor(BG);
+            g2.fillRoundRect(0, 0, w, h, h, h);
+            // progress
+            int pw = (int) Math.round(w * ratio);
+            if (pw > 0) {
+                g2.setColor(FG);
+                g2.fillRoundRect(0, 0, pw, h, h, h);
+            }
+            // border
+            g2.setColor(BORDER);
+            g2.drawRoundRect(0, 0, w - 1, h - 1, h, h);
+            g2.dispose();
+        }
     }
 }
