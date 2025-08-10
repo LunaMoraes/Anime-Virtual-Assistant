@@ -3,6 +3,7 @@ package actions;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import core.AppState;
 
@@ -50,8 +51,23 @@ public class ThinkingEngine {
     private void analyzeSituationAndAct() {
         ActionContext context = new ActionContext();
         int divisor = AppState.getChatFrequencyDivisor();
-        List<String> availableActions = actionManager.getAvailableActions(context);
 
+        // Determine if this tick should trigger a chat based on frequency
+        boolean shouldChatThisTick = divisor <= 1 || (AppState.tickCounter % divisor == 0);
+
+        // Initialize a shared list to track reasons that block the default chat this tick
+        // Other actions may append reasons like "levels", "cooldown", etc.
+        @SuppressWarnings("unchecked")
+        List<String> defaultChatBlockedBy = (List<String>) context.get("DefaultChatBlockedBy", List.class);
+        if (defaultChatBlockedBy == null) {
+            defaultChatBlockedBy = new ArrayList<>();
+            context.put("DefaultChatBlockedBy", defaultChatBlockedBy);
+        }
+
+        // Inform memory_task whether screen_analysis will run this tick, so it can decide to unify or run standalone
+        boolean willRunScreenAnalysis = defaultChatBlockedBy.isEmpty() && shouldChatThisTick;
+        context.put("will_run_screen_analysis", willRunScreenAnalysis);
+        
         // Increment global tick counter at each analysis cycle
         AppState.tickCounter++;
         System.err.println("Current Tick: " + AppState.tickCounter);
@@ -61,10 +77,9 @@ public class ThinkingEngine {
             context.put("screenshot", screenshot);
         }
 
-        // First, let task-contributor actions add their tasks to the context.
-        // These actions should be lightweight and synchronous.
+        // Brain actions, maintenance actions should come first.
 
-        // levels_task contributes level system task + payload.
+        // levels_task contributes level system task.
         if (actionManager.hasAction("levels_task")) {
             ActionResult r = actionManager.executeAction("levels_task", context);
             if (r.isFailure()) {
@@ -72,14 +87,7 @@ public class ThinkingEngine {
             }
         }
 
-        // Determine if this tick should trigger a chat based on frequency
-        boolean shouldChatThisTick = divisor <= 1 || (AppState.tickCounter % divisor == 0);
-
-        // Inform memory_task whether screen_analysis will run this tick, so it can decide to unify or run standalone
-        boolean willRunScreenAnalysis = availableActions.contains("screen_analysis") && shouldChatThisTick;
-        context.put("will_run_screen_analysis", willRunScreenAnalysis);
-
-        // memory_task contributes memory system task + payload and may run standalone every 5 ticks
+        // memory_task contributes memory system task and may run standalone every 5 ticks
         if (actionManager.hasAction("memory_task") && (AppState.tickCounter % 5 == 0)) {
             ActionResult r = actionManager.executeAction("memory_task", context);
             if (r.isFailure()) {
@@ -89,19 +97,25 @@ public class ThinkingEngine {
 
 
         // Now execute the screen analysis action which will assemble the full LLM prompt
-        if (availableActions.contains("screen_analysis") && shouldChatThisTick) {
-            ActionResult result = actionManager.executeAction("screen_analysis", context);
-
-            if (result.isFailure()) {
-                System.err.println("Screen analysis failed: " + result.getMessage());
-            } else if (result.isSkipped()) {
-                // This is normal and expected when the system is busy
-                // System.out.println("Screen analysis skipped: " + result.getMessage());
+        if (defaultChatBlockedBy.isEmpty() && shouldChatThisTick) {
+            // Keep a safety check to avoid calling a missing action
+            if (actionManager.hasAction("screen_analysis")) {
+                ActionResult result = actionManager.executeAction("screen_analysis", context);
+                if (result.isFailure()) {
+                    System.err.println("Screen analysis failed: " + result.getMessage());
+                } else if (result.isSkipped()) {
+                    // This is normal and expected when the system is busy
+                } else {
+                    System.out.println("Screen analysis executed successfully");
+                }
             } else {
-                System.out.println("Screen analysis executed successfully");
+                System.out.println("No suitable actions available at this time");
             }
         } else {
-            System.out.println("No suitable actions available at this time");
+            // Only log when blocked by reasons (not when suppressed by frequency gate)
+            if (shouldChatThisTick && !defaultChatBlockedBy.isEmpty()) {
+                System.out.println("Default chat not running, blocked by: " + String.join(", ", defaultChatBlockedBy));
+            }
         }
 
     }
