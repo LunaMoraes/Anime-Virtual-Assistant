@@ -14,9 +14,9 @@ public class AnalysisModelPanel extends JPanel {
         JRadioButton localAnalysisButton = new JRadioButton("Local");
         JRadioButton apiAnalysisButton = new JRadioButton("API");
 
-        localAnalysisButton.setOpaque(false);
+        gui.UIUtils.styleRadio(localAnalysisButton);
         localAnalysisButton.setForeground(Color.WHITE);
-        apiAnalysisButton.setOpaque(false);
+        gui.UIUtils.styleRadio(apiAnalysisButton);
         apiAnalysisButton.setForeground(Color.WHITE);
 
         analysisModelGroup.add(localAnalysisButton);

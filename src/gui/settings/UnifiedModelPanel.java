@@ -14,9 +14,9 @@ public class UnifiedModelPanel extends JPanel {
         JRadioButton localButton = new JRadioButton("Local");
         JRadioButton apiButton = new JRadioButton("API");
 
-        localButton.setOpaque(false);
+        gui.UIUtils.styleRadio(localButton);
         localButton.setForeground(Color.WHITE);
-        apiButton.setOpaque(false);
+        gui.UIUtils.styleRadio(apiButton);
         apiButton.setForeground(Color.WHITE);
 
         modelGroup.add(localButton);

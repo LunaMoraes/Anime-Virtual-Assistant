@@ -25,7 +25,7 @@ public class PersonalityPanel extends JPanel {
 
         for (Personality personality : personalities) {
             JRadioButton radioButton = new JRadioButton(personality.getName());
-            radioButton.setOpaque(false);
+            gui.UIUtils.styleRadio(radioButton);
             radioButton.setForeground(Color.WHITE);
             radioButton.setFont(new Font("Arial", Font.PLAIN, 12));
             personalityGroup.add(radioButton);

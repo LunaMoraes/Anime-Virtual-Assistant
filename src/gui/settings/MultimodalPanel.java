@@ -14,7 +14,7 @@ public class MultimodalPanel extends JPanel {
         this.onModeChanged = onModeChanged;
 
         JCheckBox useMultimodalCheckBox = new JCheckBox("Enable Multimodal (Vision)");
-        useMultimodalCheckBox.setOpaque(false);
+        gui.UIUtils.styleCheckBox(useMultimodalCheckBox);
         useMultimodalCheckBox.setForeground(Color.WHITE);
         useMultimodalCheckBox.setSelected(AppState.useMultimodal());
 

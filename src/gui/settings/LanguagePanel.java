@@ -15,6 +15,7 @@ public class LanguagePanel extends JPanel {
         JComboBox<String> languageSelector = new JComboBox<>(languages);
         languageSelector.setSelectedItem(AppState.selectedLanguage);
         languageSelector.setPreferredSize(new Dimension(200, 30));
+        gui.UIUtils.styleCombo(languageSelector);
         add(languageSelector);
 
         languageSelector.addItemListener(e -> {

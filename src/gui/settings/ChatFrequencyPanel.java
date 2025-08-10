@@ -16,8 +16,9 @@ public class ChatFrequencyPanel extends JPanel {
         super(new FlowLayout(FlowLayout.LEFT));
         setOpaque(false);
 
-    combo = new JComboBox<>(new String[]{"frequent", "medium", "scarse"});
-    combo.setPreferredSize(new java.awt.Dimension(200, 30));
+        combo = new JComboBox<>(new String[]{"frequent", "medium", "scarse"});
+        combo.setPreferredSize(new java.awt.Dimension(200, 30));
+        gui.UIUtils.styleCombo(combo);
         combo.setSelectedItem(AppState.getChatFrequency());
         combo.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED) {

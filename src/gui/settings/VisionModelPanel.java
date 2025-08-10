@@ -14,9 +14,9 @@ public class VisionModelPanel extends JPanel {
         JRadioButton localVisionButton = new JRadioButton("Local");
         JRadioButton apiVisionButton = new JRadioButton("API");
 
-        localVisionButton.setOpaque(false);
+        gui.UIUtils.styleRadio(localVisionButton);
         localVisionButton.setForeground(Color.WHITE);
-        apiVisionButton.setOpaque(false);
+        gui.UIUtils.styleRadio(apiVisionButton);
         apiVisionButton.setForeground(Color.WHITE);
 
         visionModelGroup.add(localVisionButton);

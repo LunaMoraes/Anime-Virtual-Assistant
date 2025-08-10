@@ -39,11 +39,11 @@ public class SectionPanel extends JPanel {
         } else {
             add(titleLabel, BorderLayout.NORTH);
         }
-    JPanel body = new JPanel();
-    body.setOpaque(false);
-    body.setLayout(new BorderLayout());
-    body.add(Box.createVerticalStrut(10), BorderLayout.NORTH);
-    body.add(content, BorderLayout.CENTER);
-    add(body, BorderLayout.CENTER);
+        JPanel body = new JPanel();
+        body.setOpaque(false);
+        body.setLayout(new BorderLayout());
+        body.add(Box.createVerticalStrut(10), BorderLayout.NORTH);
+        body.add(content, BorderLayout.CENTER);
+        add(body, BorderLayout.CENTER);
     }
 }

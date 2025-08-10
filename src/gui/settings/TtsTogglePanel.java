@@ -16,9 +16,9 @@ public class TtsTogglePanel extends JPanel {
         super(new FlowLayout(FlowLayout.LEFT));
         setOpaque(false);
 
-    enableTts = new JCheckBox("Enable TTS");
-    enableTts.setOpaque(false);
-    enableTts.setForeground(java.awt.Color.WHITE);
+        enableTts = new JCheckBox("Enable TTS");
+        gui.UIUtils.styleCheckBox(enableTts);
+        enableTts.setForeground(java.awt.Color.WHITE);
         enableTts.setSelected(AppState.useTTS());
         enableTts.addItemListener(e -> {
             if (e.getStateChange() == ItemEvent.SELECTED || e.getStateChange() == ItemEvent.DESELECTED) {
