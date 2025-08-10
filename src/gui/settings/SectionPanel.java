@@ -8,6 +8,10 @@ import java.awt.*;
  */
 public class SectionPanel extends JPanel {
     public SectionPanel(String title, JComponent content) {
+        this(title, content, false);
+    }
+
+    public SectionPanel(String title, JComponent content, boolean centerTitle) {
         super(new BorderLayout());
         // Semi-transparent dark background for readability
         setBackground(new Color(40, 40, 40, 200));
@@ -20,7 +24,21 @@ public class SectionPanel extends JPanel {
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         titleLabel.setForeground(Color.WHITE);
-    add(titleLabel, BorderLayout.NORTH);
+        if (centerTitle) {
+            // Use a 3-column grid title row so the center aligns with the middle column below
+            JPanel titleWrap = new JPanel(new GridLayout(1, 3, 16, 0));
+            titleWrap.setOpaque(false);
+            // left filler
+            titleWrap.add(new JLabel());
+            // centered title in the middle cell
+            titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            titleWrap.add(titleLabel);
+            // right filler
+            titleWrap.add(new JLabel());
+            add(titleWrap, BorderLayout.NORTH);
+        } else {
+            add(titleLabel, BorderLayout.NORTH);
+        }
     JPanel body = new JPanel();
     body.setOpaque(false);
     body.setLayout(new BorderLayout());

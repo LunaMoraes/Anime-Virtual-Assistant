@@ -326,7 +326,7 @@ public class SettingsWindow extends JFrame {
         tab.setOpaque(false);
         tab.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JPanel statsSection = createSection("Attributes", new ProfilePanel());
+    JPanel statsSection = new gui.settings.SectionPanel("Profile", new ProfilePanel(), true);
         tab.add(statsSection);
 
         JScrollPane scrollPane = new JScrollPane(tab);

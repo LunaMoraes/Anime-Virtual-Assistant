@@ -9,27 +9,14 @@ import java.util.Map;
 
 /**
  * Displays user profile: attributes XP and available skills.
+ * Note: No inner scroll pane; outer tab's scroll handles mouse wheel.
  */
 public class ProfilePanel extends JPanel {
-    private final JPanel content;
 
     public ProfilePanel() {
         super();
         setOpaque(false);
-        setLayout(new BorderLayout());
-
-        content = new JPanel();
-        content.setOpaque(false);
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-    JScrollPane scroll = new JScrollPane(
-        content,
-        JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-    scroll.setBorder(null);
-    scroll.setOpaque(false);
-    scroll.getViewport().setOpaque(false);
-    scroll.getVerticalScrollBar().setUnitIncrement(20);
-        add(scroll, BorderLayout.CENTER);
+        setLayout(new BorderLayout(0, 10));
 
         rebuild();
 
@@ -38,32 +25,28 @@ public class ProfilePanel extends JPanel {
     }
 
     private void rebuild() {
-        content.removeAll();
-
-        // Title
-        JLabel title = styledLabel("Profile");
-        title.setFont(new Font("Arial", Font.BOLD, 14));
-        content.add(title);
-        content.add(Box.createVerticalStrut(8));
+        removeAll();
 
         Map<String, Integer> attrLevels = LevelManager.getAttributeXp();
         Map<String, SkillInfo> skills = LevelManager.getAvailableSkills();
 
         if (attrLevels == null || attrLevels.isEmpty()) {
-            content.add(styledLabel("No attributes found."));
+            add(styledLabel("No attributes found."), BorderLayout.NORTH);
         } else {
+            // Three-column grid for attributes
+            JPanel grid = new JPanel(new GridLayout(0, 3, 16, 12));
+            grid.setOpaque(false);
+
             for (Map.Entry<String, Integer> e : attrLevels.entrySet()) {
                 String attr = e.getKey();
                 Integer lvl = e.getValue();
 
-                // Attribute header
-                JPanel row = new JPanel(new BorderLayout());
-                row.setOpaque(false);
+                JPanel card = new JPanel(new BorderLayout());
+                card.setOpaque(false);
                 JLabel attrLabel = styledLabel(attr + ": " + (lvl != null ? lvl : 0));
                 attrLabel.setFont(new Font("Arial", Font.BOLD, 12));
-                row.add(attrLabel, BorderLayout.NORTH);
+                card.add(attrLabel, BorderLayout.NORTH);
 
-                // Nested skills for this attribute
                 JPanel nested = new JPanel();
                 nested.setOpaque(false);
                 nested.setLayout(new BoxLayout(nested, BoxLayout.Y_AXIS));
@@ -73,7 +56,7 @@ public class ProfilePanel extends JPanel {
                         String name = s.getKey();
                         SkillInfo info = s.getValue();
                         if (info != null && info.getAttribute() != null && info.getAttribute().equalsIgnoreCase(attr)) {
-                            JLabel item = styledLabel("    • " + name + ": " + info.getExperience() + "xp");
+                            JLabel item = styledLabel("    \u2022 " + name + ": " + info.getExperience() + "xp");
                             nested.add(item);
                             count++;
                         }
@@ -81,17 +64,16 @@ public class ProfilePanel extends JPanel {
                 }
                 if (count == 0) nested.add(styledLabel("    (no skills yet)"));
 
-                row.add(nested, BorderLayout.CENTER);
-                row.setBorder(BorderFactory.createEmptyBorder(4, 4, 8, 4));
-                content.add(row);
+                card.add(nested, BorderLayout.CENTER);
+                card.setBorder(BorderFactory.createEmptyBorder(4, 4, 8, 4));
+                grid.add(card);
             }
+
+            add(grid, BorderLayout.CENTER);
         }
 
-    content.add(Box.createVerticalGlue());
-    // Let layout recompute preferred sizes for proper scroll behavior
-    content.setPreferredSize(null);
-    content.revalidate();
-    content.repaint();
+        revalidate();
+        repaint();
     }
 
     private JLabel styledLabel(String text) {
