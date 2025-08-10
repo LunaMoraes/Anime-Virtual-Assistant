@@ -1,105 +1,77 @@
 # 🎀 Anime Virtual Assistant 🎀
 
-**Welcome to the Anime Virtual Assistant**, a desktop companion that watches your screen and provides commentary based on your chosen AI personality. An always-on-top character will keep you company, with expressions that change as she reacts to your on-screen activities.
+[![Java 21](https://img.shields.io/badge/Java-21-ff69b4?logo=openjdk&logoColor=white)](https://www.oracle.com/br/java/technologies/downloads/)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-87cefa?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
+[![Windows Supported](https://img.shields.io/badge/OS-Windows-9370db?logo=windows&logoColor=white)]()
+[![License](https://img.shields.io/github/license/LunaMoraes/Anime-Virtual-Assistant?color=90ee90)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/LunaMoraes/Anime-Virtual-Assistant?style=social)](https://github.com/LunaMoraes/Anime-Virtual-Assistant/stargazers)
 
-This application is **highly customizable**, allowing you to switch between different characters, voices, and even the underlying AI models that power the assistant.
+**Welcome to the Anime Virtual Assistant**, a desktop companion that watches your screen and provides commentary based on your chosen AI personality. An always-on-top anime character keeps you company, reacting dynamically to your on-screen activities.
 
 ---
 
 ## ✨ Features
 
-- **Always-On-Top Character**  
-  A friendly (or not-so-friendly) anime character stays on your screen, brought to life with dynamic images.
-
-- **Multiple Personalities**  
-  Choose from a variety of personalities like *Barbie*, *Nerd*, or *Tsundere*. Each has a unique voice, prompt, and style of commentary.
-
-- **Dynamic UI**  
-  The settings window is styled with a custom **girly dark-mode** theme, complete with a background and title image.
-
-- **AI Model Flexibility**  
-  Switch between powerful external APIs (e.g., **Google Gemini**) or run entirely on **local models** for offline use and privacy.
-
-- **Multimodal AI**  
-  The assistant can understand your on-screen content by sending screenshots to a vision-capable AI model for **more accurate commentary**.
-
-- **Extensible**  
-  Easily add your own **custom characters**, personalities, and prompts!
+- **🔢 Always-On-Top Character** – Dynamic, expressive anime character overlay.
+- **👩‍💻 Multiple Personalities** – Barbie, Nerd, Tsundere, and more, each with unique prompts, voices, and styles.
+- **🌟 Custom Girly Dark Mode UI** – A themed settings panel with background and title image.
+- **🤖 AI Model Flexibility** – Choose between external APIs (Google Gemini) or local models for privacy.
+- **🌍 Multimodal AI** – Sends screenshots to vision-capable models for accurate commentary.
+- **🛠️ Extensible** – Easily add custom characters, personalities, and prompts.
 
 ---
 
-## 🚀 How to Set Up
+## 🚀 Quick Start
 
-To get the assistant running on your machine, follow these steps.
+### **Prerequisites**
+[![Java](https://img.shields.io/badge/Java-21-ff69b4?logo=openjdk&logoColor=white)](https://www.oracle.com/br/java/technologies/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.12-87cefa?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
+[![Coqui TTS](https://img.shields.io/badge/TTS-Coqui-9370db?logo=coqui&logoColor=white)](https://github.com/coqui-ai/TTS)
+[![espeak-ng](https://img.shields.io/badge/Tool-espeak--ng-90ee90)](https://github.com/espeak-ng/espeak-ng/releases/tag/1.52.0)
 
-### Prerequisites
+- **Java:** Version 21
+- **Python:** Version 3.12 (No other version supported)
+- **Python Dependencies:** From `requirements.txt`
+- **espeak-ng:** Required for Coqui TTS
 
-- **Java:** Version 21, also called JDK 21 in the link below.
-https://www.oracle.com/br/java/technologies/downloads/
-- **Python:** Version 3.12 -- DO NOT USE ANY OTHER VERSION! 
-https://www.python.org/downloads/release/python-3120/
-- **Python Dependencies:** Required libraries (e.g., `Flask`, `Coqui TTS`) must be installed.
-(requirements.txt)
-- **espeak-ng:** must be installed to use the COQUI TTS
-https://github.com/espeak-ng/espeak-ng/releases/tag/1.52.0
 ---
 
-### Installation & Launch
-
-#### 1. Clone the Repository
+### **Installation**
 
 ```bash
 git clone https://github.com/LunaMoraes/Anime-Virtual-Assistant/
 ```
 
-#### 2. Start the Backend API Server
+#### 1️⃣ Start Backend API Server
 
-Navigate into the cloned folder within a CMD. 
-
-If you plan to use CUDA (faster processing but requires nvidia GPU), use the command below before anything:
+If you use CUDA for faster processing (requires NVIDIA GPU):
 ```bash
 py -3.12 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 ```
 
-Then, regardless of the previous step run the requirements:
+Install dependencies:
 ```bash
-# Please note that this command might take up to 10min if your computer is slow.
 py -3.12 -m pip install -r requirements.txt
 ```
+
+Run API server:
 ```bash
-# (First, ensure you’ve installed the required packages from requirements.txt).
 py -3.12 start_api_coqui.py
 ```
+> Keep this terminal open.
 
-> **Keep this terminal open.** It's required for speech and local AI support.
+#### 2️⃣ Launch the Assistant
 
-#### 3. Run the Assistant
-
-Navigate to the project folder and double-click `VirtualAssistant.jar` to open the Settings window. Then press **"Start Assistant"** to summon the character!
+Double-click `VirtualAssistant.jar` → Press **"Start Assistant"**.
 
 ---
 
-## 🔧 Configuration (Optional)
+## 🔧 Optional: External API Setup
 
-### Enable External APIs
-
-For higher-quality responses, configure external APIs (like **Google Gemini**). We recommend using Gemma 3 as it is  and multimodal, meaning it can handle both text and images:
-
-1. Open: `data/system/system.json`
-2. Add your API keys:
+For better responses, configure **Google Gemini** in `data/system/system.json`:
 
 ```json
 {
-  "analysis": {
-    "key": "",
-    "model_name": "",
-    "url": ""
-  },
-  "vision": {
-    "key": "",
-    "model_name": "",
-    "url": ""
-  },
   "multimodal": {
     "key": "YOUR_GEMINI_API_KEY_HERE",
     "model_name": "gemma-3-27b-it",
@@ -108,11 +80,12 @@ For higher-quality responses, configure external APIs (like **Google Gemini**). 
 }
 ```
 
-3. Save the file.
-4. In the **Settings window**, toggle between **"Local"** and **"API"** models.
+Then toggle between **Local** and **API** models in Settings.
 
 ---
 
-## 🎨 Modding: Plugins are coming soon!
+## 🎨 Modding Support
 
-Creating your own character is easy!
+Custom characters are easy to make – **Plugins coming soon!**
+
+---
