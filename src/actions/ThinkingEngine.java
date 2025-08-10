@@ -50,6 +50,28 @@ public class ThinkingEngine {
      */
     private void analyzeSituationAndAct() {
         ActionContext context = new ActionContext();
+        // Make global context available to actions for cross-tick data sharing
+        ActionContext global = actionManager.getGlobalContext();
+        context.put("global_context", global);
+        context.put("action_manager", actionManager);
+        // Also expose in the global context so actions that only retain the global reference can resolve it
+        try { global.put("action_manager", actionManager); } catch (Throwable ignored) {}
+
+        // 1) Flush any queued raw model outputs from previous cycles and route bracket commands
+        try {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> queued = global.get("raw_model_output_queue", java.util.List.class);
+            if (queued != null && !queued.isEmpty()) {
+                // Copy then clear
+                java.util.List<String> copy = new java.util.ArrayList<>(queued);
+                queued.clear();
+                for (String raw : copy) {
+                    routeBracketSections(raw, actionManager.getRegisteredActions(), global);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error routing queued bracket sections: " + e.getMessage());
+        }
         int divisor = AppState.getChatFrequencyDivisor();
 
         // Determine if this tick should trigger a chat based on frequency
@@ -67,7 +89,7 @@ public class ThinkingEngine {
         // Inform memory_task whether screen_analysis will run this tick, so it can decide to unify or run standalone
         boolean willRunScreenAnalysis = defaultChatBlockedBy.isEmpty() && shouldChatThisTick;
         context.put("will_run_screen_analysis", willRunScreenAnalysis);
-        
+
         // Increment global tick counter at each analysis cycle
         AppState.tickCounter++;
         System.err.println("Current Tick: " + AppState.tickCounter);
@@ -95,7 +117,6 @@ public class ThinkingEngine {
             }
         }
 
-
         // Now execute the screen analysis action which will assemble the full LLM prompt
         if (defaultChatBlockedBy.isEmpty() && shouldChatThisTick) {
             // Keep a safety check to avoid calling a missing action
@@ -112,12 +133,86 @@ public class ThinkingEngine {
                 System.out.println("No suitable actions available at this time");
             }
         } else {
-            // Only log when blocked by reasons (not when suppressed by frequency gate)
+            // Build tasks-only content if any tasks contributed this tick
+            boolean hasTaskContent = context.contains("other_task_content")
+                    && context.get("other_task_content", StringBuilder.class) != null
+                    && context.get("other_task_content", StringBuilder.class).length() > 0;
+
+            // Log only when blocked by reasons
             if (shouldChatThisTick && !defaultChatBlockedBy.isEmpty()) {
                 System.out.println("Default chat not running, blocked by: " + String.join(", ", defaultChatBlockedBy));
             }
+
+            // If speak is throttled OR blocked, but we have task content, run a tasks-only request now
+            if ((!shouldChatThisTick || !defaultChatBlockedBy.isEmpty()) && hasTaskContent) {
+                try {
+                    String tasksOnlyPrompt = buildTasksOnlyPrompt(context);
+                    if (tasksOnlyPrompt != null && !tasksOnlyPrompt.isBlank()) {
+                        System.out.println("Running tasks-only request...");
+                        System.out.println("Tasks-only prompt:\n" + tasksOnlyPrompt);
+                        String rawTasksResponse = api.ApiClient.generateResponse(tasksOnlyPrompt);
+                        if (rawTasksResponse != null && !rawTasksResponse.isBlank()) {
+                            System.out.println("Tasks-only RAW model output: " + rawTasksResponse);
+                            // Route immediately so task effects apply this tick
+                            routeBracketSections(rawTasksResponse, actionManager.getRegisteredActions(), global);
+                        } else {
+                            System.out.println("Tasks-only request returned no content.");
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error in tasks-only request: " + e.getMessage());
+                }
+            }
         }
 
+    }
+
+    private String buildTasksOnlyPrompt(ActionContext context) {
+        // Build a prompt from system tasks + contributed task content only (no personality/speak/vision/multimodal)
+        if (!context.contains("other_task_content")) return null;
+        StringBuilder other = context.get("other_task_content", StringBuilder.class);
+        if (other == null || other.length() == 0) return null;
+
+        String tasksInstruction = config.ConfigurationManager.getTasksInstruction();
+        StringBuilder finalPrompt = new StringBuilder();
+        if (tasksInstruction != null && !tasksInstruction.isBlank()) {
+            finalPrompt.append(tasksInstruction).append("\n\n");
+        }
+        finalPrompt.append(other);
+        return finalPrompt.toString();
+    }
+
+    public static void routeBracketSections(String raw, java.util.Collection<Action> actions, ActionContext context) {
+        if (raw == null || raw.isBlank() || actions == null || actions.isEmpty()) return;
+        int idx = 0;
+        boolean anyFound = false;
+        int levelsCount = 0;
+        while ((idx = raw.indexOf('[', idx)) != -1) {
+            int end = raw.indexOf(']', idx + 1);
+            if (end == -1) break;
+            String inside = raw.substring(idx + 1, end).trim();
+            anyFound = true;
+            if (!inside.startsWith("speak:")) {
+                System.out.println("Bracketed section found: [" + inside + "]");
+            }
+            if (inside.startsWith("levels:")) levelsCount++;
+            for (Action a : actions) {
+                if (a instanceof BracketAwareAction baa) {
+                    for (String p : baa.getBracketPrefixes()) {
+                        if (inside.startsWith(p)) {
+                            try { baa.handleBracket(inside, context); } catch (Throwable ignored) {}
+                            break;
+                        }
+                    }
+                }
+            }
+            idx = end + 1;
+        }
+        if (!anyFound) {
+            System.out.println("No bracketed sections found in model output.");
+        } else if (levelsCount == 0) {
+            System.out.println("No [levels:...] command found; no level changes will be applied this cycle.");
+        }
     }
 
     /**

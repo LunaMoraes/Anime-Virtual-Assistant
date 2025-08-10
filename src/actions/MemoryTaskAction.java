@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Contributes memory task content and data to the unified prompt or runs standalone when chat is throttled.
  */
-public class MemoryTaskAction implements Action {
+public class MemoryTaskAction implements BracketAwareAction {
     private static final String ID = "memory_task";
 
     @Override
@@ -49,29 +49,21 @@ public class MemoryTaskAction implements Action {
             String tasksInstruction = ConfigurationManager.getTasksInstruction();
             boolean willRunSA = context.contains("will_run_screen_analysis") && Boolean.TRUE.equals(context.get("will_run_screen_analysis", Boolean.class));
 
-            if (willRunSA) {
-                // Contribute to the unified prompt
-                StringBuilder sb = context.contains("other_task_content") ? context.get("other_task_content", StringBuilder.class) : new StringBuilder();
-                if (sb == null) sb = new StringBuilder();
-                sb.append(tasksInstruction).append('\n');
-                sb.append("\n--- MEMORY TASK ---\n");
-                sb.append(instructions).append('\n');
-                sb.append("\nDATA=\n");
-                sb.append(new Gson().toJson(data));
-                sb.append("\n--- END OF MEMORY TASK ---\n");
-                context.put("other_task_content", sb);
-                return ActionResult.success("memory task prepared");
-            } else {
-                // Run standalone: call analysis model directly using the instructions and data
-                StringBuilder finalPrompt = new StringBuilder();
-                finalPrompt.append(tasksInstruction).append('\n');
-                finalPrompt.append(instructions).append('\n');
-                finalPrompt.append("\nDATA=\n");
-                finalPrompt.append(new Gson().toJson(data));
+            // ALWAYS prepare the content - needed for both unified prompt AND tasks-only request
+            StringBuilder sb = context.contains("other_task_content") ? context.get("other_task_content", StringBuilder.class) : new StringBuilder();
+            if (sb == null) sb = new StringBuilder();
+            sb.append(tasksInstruction).append('\n');
+            sb.append("\n--- MEMORY TASK ---\n");
+            sb.append(instructions).append('\n');
+            sb.append("\nDATA=\n");
+            sb.append(new Gson().toJson(data));
+            sb.append("\n--- END OF MEMORY TASK ---\n");
+            context.put("other_task_content", sb);
 
-                String raw = api.ApiClient.generateResponse(finalPrompt.toString());
-                handleMemorySections(raw);
-                return ActionResult.success("memory task executed standalone");
+            if (willRunSA) {
+                return ActionResult.success("memory task prepared for unified prompt");
+            } else {
+                return ActionResult.success("memory task prepared for tasks-only request");
             }
         } catch (Exception e) {
             return ActionResult.failure("error preparing memory task: " + e.getMessage());
@@ -94,34 +86,34 @@ public class MemoryTaskAction implements Action {
         }
     }
 
-    private void handleMemorySections(String raw) {
-        if (raw == null) return;
-        int idx = 0;
-        while ((idx = raw.indexOf('[', idx)) != -1) {
-            int end = raw.indexOf(']', idx + 1);
-            if (end == -1) break;
-            String inside = raw.substring(idx + 1, end).trim();
-            String lower = inside.toLowerCase();
-            if (!lower.startsWith("memory:")) { idx = end + 1; continue; }
-            String cmd = inside.substring("memory:".length()).trim();
-            if (cmd.startsWith("write_short_term")) {
-                int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
-                if (lp != -1 && rp > lp) {
-                    String payload = cmd.substring(lp + 1, rp).trim();
-                    payload = stripWrappingQuotes(payload);
-                    config.MemoryStore.setShortTerm(payload);
-                    System.out.println("Updated short-term memory.");
-                }
-            } else if (cmd.startsWith("write_long_term")) {
-                int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
-                if (lp != -1 && rp > lp) {
-                    String payload = cmd.substring(lp + 1, rp).trim();
-                    payload = stripWrappingQuotes(payload);
-                    config.MemoryStore.setLongTerm(payload);
-                    System.out.println("Updated long-term memory.");
-                }
+    // handleMemorySections removed - bracket routing now handled by ThinkingEngine
+
+    // BracketAwareAction
+    @Override
+    public java.util.List<String> getBracketPrefixes() {
+        return java.util.List.of("memory:");
+    }
+
+    @Override
+    public void handleBracket(String content, ActionContext context) {
+        if (content == null || !content.startsWith("memory:")) return;
+        String cmd = content.substring("memory:".length()).trim();
+        if (cmd.startsWith("write_short_term")) {
+            int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+            if (lp != -1 && rp > lp) {
+                String payload = cmd.substring(lp + 1, rp).trim();
+                payload = stripWrappingQuotes(payload);
+                config.MemoryStore.setShortTerm(payload);
+                System.out.println("Dispatch: memory.write_short_term updated.");
             }
-            idx = end + 1;
+        } else if (cmd.startsWith("write_long_term")) {
+            int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+            if (lp != -1 && rp > lp) {
+                String payload = cmd.substring(lp + 1, rp).trim();
+                payload = stripWrappingQuotes(payload);
+                config.MemoryStore.setLongTerm(payload);
+                System.out.println("Dispatch: memory.write_long_term updated.");
+            }
         }
     }
 

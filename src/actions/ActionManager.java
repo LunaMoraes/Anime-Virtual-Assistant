@@ -94,6 +94,13 @@ public class ActionManager {
     }
 
     /**
+     * Returns the live collection of registered Action instances.
+     */
+    public java.util.Collection<Action> getRegisteredActions() {
+        return registeredActions.values();
+    }
+
+    /**
      * Checks if an action is registered.
      */
     public boolean hasAction(String actionId) {

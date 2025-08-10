@@ -11,7 +11,7 @@ import java.util.Map;
  * Contributes the levels-related task (prompt + payload) to the ActionContext so that
  * ScreenAnalysisAction can send a unified request to the LLM covering all tasks.
  */
-public class LevelsTaskAction implements Action {
+public class LevelsTaskAction implements BracketAwareAction {
     private static final Gson GSON = new Gson();
 
     @Override
@@ -67,5 +67,51 @@ public class LevelsTaskAction implements Action {
 
         context.put("other_task_content", other);
         return ActionResult.success("Levels task content added");
+    }
+
+    // BracketAwareAction
+    @Override
+    public java.util.List<String> getBracketPrefixes() {
+        return java.util.List.of("levels:");
+    }
+
+    @Override
+    public void handleBracket(String content, ActionContext context) {
+        try {
+            String lower = content; // case-sensitive check required by spec
+            if (!lower.startsWith("levels:")) return;
+            String cmd = content.substring("levels:".length()).trim();
+            // Allow optional wrapping parentheses: [levels:(add_exp_on_skill(...))]
+            if (cmd.startsWith("(") && cmd.endsWith(")") && cmd.length() > 2) {
+                cmd = cmd.substring(1, cmd.length() - 1).trim();
+            }
+            if (cmd.startsWith("add_exp_on_skill")) {
+                int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+                if (lp != -1 && rp > lp) {
+                    String arg = cmd.substring(lp + 1, rp).trim();
+                    String skill = stripQuotes(arg);
+                    System.out.println("Dispatch: levels.addExpOnSkill(" + skill + ")");
+                    levels.LevelManager.addExpOnSkill(skill, 1);
+                }
+            } else if (cmd.startsWith("add_skill")) {
+                int lp = cmd.indexOf('('), rp = cmd.lastIndexOf(')');
+                if (lp != -1 && rp > lp) {
+                    String args = cmd.substring(lp + 1, rp);
+                    String[] parts = args.split(",");
+                    String skill = parts.length > 0 ? stripQuotes(parts[0].trim()) : null;
+                    String attr = parts.length > 1 ? stripQuotes(parts[1].trim()) : null;
+                    System.out.println("Dispatch: levels.addSkill(" + skill + ", " + attr + ")");
+                    levels.LevelManager.addSkill(skill, attr);
+                }
+            }
+        } catch (Exception ignored) {}
+    }
+
+    private String stripQuotes(String s) {
+        if (s == null) return null;
+        if ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'"))) {
+            return s.substring(1, s.length() - 1);
+        }
+        return s;
     }
 }
