@@ -4,10 +4,7 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
-import api.ApiClient;
 import api.TtsApiClient;
 import config.ConfigurationManager;
 import personality.PersonalityManager;
@@ -21,7 +18,6 @@ public class ScreenAnalysisAction implements Action {
 
     private final List<BufferedImage> screenshotBuffer = new ArrayList<>();
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
-    private static final ExecutorService PROCESSOR = Executors.newSingleThreadExecutor(r -> new Thread(r, "screen-analysis-processor"));
     private volatile String currentUnifiedPrompt = null;
     private volatile ActionContext currentGlobalContext = null;
 
@@ -46,7 +42,7 @@ public class ScreenAnalysisAction implements Action {
             return ActionResult.skipped("Already processing or not running");
         }
 
-    if (!isProcessing.compareAndSet(false, true)) {
+        if (!isProcessing.compareAndSet(false, true)) {
             return ActionResult.skipped("Processing already in progress");
         }
 
@@ -76,28 +72,26 @@ public class ScreenAnalysisAction implements Action {
                 screenshotBuffer.clear();
             }
 
-        // Mark global processing state so the thinking loop can pause while we work
-        AppState.isActionProcessing = true;
+            // Mark global processing state so the thinking loop can pause while we work
+            AppState.isActionProcessing = true;
 
             // Collect any additional task content contributed by other actions for this run
             currentUnifiedPrompt = getOtherTaskContent(context);
-            // Capture global context for bracket routing enqueue
+            // Capture global context for bracket routing
             currentGlobalContext = context.contains("global_context") ? context.get("global_context", ActionContext.class) : null;
 
-            // Process in background executor to avoid blocking and prevent thread leaks
-            PROCESSOR.submit(() -> {
-                try {
-                    processAndRespond(images.get(0));
-                } catch (Exception e) {
-                    System.err.println("Error during AI processing: " + e.getMessage());
-                    e.printStackTrace();
-                } finally {
-                    isProcessing.set(false);
-            AppState.isActionProcessing = false;
-                }
-            });
-
-            return ActionResult.success("Screen analysis initiated");
+            // Process synchronously since ThinkingEngine already controls the flow
+            try {
+                processAndRespond(images.get(0));
+                return ActionResult.success("Screen analysis completed");
+            } catch (Exception e) {
+                System.err.println("Error during AI processing: " + e.getMessage());
+                e.printStackTrace();
+                return ActionResult.failure("Error during screen analysis: " + e.getMessage());
+            } finally {
+                isProcessing.set(false);
+                AppState.isActionProcessing = false;
+            }
 
         } catch (Exception e) {
             isProcessing.set(false);
@@ -106,52 +100,36 @@ public class ScreenAnalysisAction implements Action {
     }
 
     private void processAndRespond(BufferedImage image) throws Exception {
-    String finalResponseToSpeak;
+        String selectedTtsVoice = AppState.selectedTtsCharacterVoice;
+        String selectedLanguage = AppState.selectedLanguage;
+        // Build the unified prompt (memory, levels, personality, etc.)
+        String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
+        String personalityPrompt = AppState.useMultimodal()
+            ? PersonalityManager.getCurrentMultimodalPrompt()
+            : PersonalityManager.getCurrentPersonalityPrompt();
+        // Add the essential speak task appends (speak prompts, memory, last 5 comments, etc.)
+        String fullPersonalityPrompt = getSpeakTaskAppends(personalityPrompt);
+        String prompt = (unified.isBlank() ? fullPersonalityPrompt : unified + "\n\n" + fullPersonalityPrompt);
 
-    // Access AppState directly now that it's in a proper package
-    boolean useMultimodal = AppState.useMultimodal();
-    String selectedTtsVoice = AppState.selectedTtsCharacterVoice;
-    String selectedLanguage = AppState.selectedLanguage;
+        // Get expected bracket prefixes from global context if available
+        @SuppressWarnings("unchecked")
+        List<String> expectedBracketPrefixes = null;
+        ActionContext global = currentGlobalContext;
+        if (global != null && global.contains("expected_bracket_prefixes")) {
+            expectedBracketPrefixes = (List<String>) global.get("expected_bracket_prefixes", List.class);
+        }
+        ActionManager am = (global != null && global.contains("action_manager")) ? global.get("action_manager", ActionManager.class) : null;
+        java.util.Collection<Action> actions = (am != null) ? am.getRegisteredActions() : java.util.List.of();
 
-        String rawForImmediateRouting = null;
-        if (useMultimodal) {
-            System.out.println("Using multimodal mode - single request");
-            String rawResponse = processMultimodal(image);
-            System.out.println("RAW model output: " + rawResponse);
-            rawForImmediateRouting = rawResponse;
-            // Parse speak after we've captured RAW for routing
-            finalResponseToSpeak = parseFinalResponse(rawResponse);
-        } else {
-            System.out.println("Using traditional mode - separate vision and analysis requests");
-            System.out.println("Analyzing screenshot with vision service...");
-            String imageDescription = analyzeImage(image);
-
-            if (imageDescription == null || imageDescription.isBlank()) {
-                System.err.println("Vision service did not return a description.");
-                return;
-            } else {
-                System.out.println("Vision service description: " + imageDescription);
-                System.out.println("Generating final response with language model...");
-                String rawResponse = generateResponse(imageDescription);
-                System.out.println("RAW model output: " + rawResponse);
-                rawForImmediateRouting = rawResponse;
-                // Parse speak after we've captured RAW for routing
-                finalResponseToSpeak = parseFinalResponse(rawResponse);
-            }
+        // Use ThinkingEngine helper for model execution and bracket routing
+        String rawModelOutput = null;
+        try {
+            rawModelOutput = ThinkingEngine.runImageAwarePromptFlow(image, prompt, expectedBracketPrefixes, actions, global);
+        } catch (Exception e) {
+            System.err.println("Error during image-aware prompt flow: " + e.getMessage());
         }
 
-    // Route brackets immediately this tick, before starting TTS
-        try {
-            ActionContext global = currentGlobalContext;
-            if (global != null) {
-                ActionManager am = global.contains("action_manager") ? global.get("action_manager", ActionManager.class) : null;
-                if (am != null && rawForImmediateRouting != null && !rawForImmediateRouting.isBlank()) {
-                    System.out.println("Dispatching bracket sections immediately (same tick) before TTS...");
-                    ThinkingEngine.routeBracketSections(rawForImmediateRouting, am.getRegisteredActions(), global);
-                }
-            }
-        } catch (Exception ignored) {}
-
+        String finalResponseToSpeak = parseFinalResponse(rawModelOutput);
         if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
             System.out.println("Spoken (after stripping brackets): " + finalResponseToSpeak);
             System.out.println("Speaking: " + finalResponseToSpeak);
@@ -177,61 +155,6 @@ public class ScreenAnalysisAction implements Action {
             PersonalityManager.saveResponseToMemory(finalResponseToSpeak);
         }
     }
-
-    private String analyzeImage(BufferedImage image) throws Exception {
-        String prompt = ConfigurationManager.getVisionPrompt();
-        return ApiClient.analyzeImage(image, prompt);
-    }
-
-    private String generateResponse(String context) throws Exception {
-        // For traditional path, still include any contributed task content so LLM can parcel outputs.
-        String personalityPrompt = PersonalityManager.getCurrentPersonalityPrompt();
-        String base;
-        if (personalityPrompt == null) {
-            String fallbackPrompt = ConfigurationManager.getFallbackPrompt();
-            base = String.format(fallbackPrompt, context.replace("\"", "'"));
-        } else {
-            base = getString(context, personalityPrompt);
-        }
-
-        String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
-        String finalPrompt = unified.isBlank() ? base : unified + "\n\n" + base;
-        System.out.println("Final prompt sent to LLM: " + finalPrompt);
-        return ApiClient.generateResponse(finalPrompt);
-    }
-
-    private static String getString(String context, String personalityPrompt) {
-        StringBuilder promptBuilder = new StringBuilder();
-        promptBuilder.append(String.format(personalityPrompt, context.replace("\"", "'")));
-        
-        promptBuilder.append(ConfigurationManager.getSpeakTaskPrompt());
-
-        // Add recent context: last five comments and memories
-        java.util.List<String> lastFive = personality.PersonalityManager.getLastResponses();
-        if (lastFive != null && !lastFive.isEmpty()) {
-            promptBuilder.append("\nYour 5 past comments are:\n");
-            for (String r : lastFive) {
-                if (r != null && !r.isBlank()) {
-                    promptBuilder.append("- ").append(r.replace("\"", "'"))
-                                 .append("\n");
-                }
-            }
-        }
-        promptBuilder.append("\". Your new comment MUST be different, do not make it repetitive.");
-        String stm = config.MemoryStore.getShortTerm();
-        String ltm = config.MemoryStore.getLongTerm();
-        if (stm != null && !stm.isBlank()) {
-            promptBuilder.append("Short term memory to add context: ").append(stm.replace("\"", "'"))
-                         .append("\n");
-        }
-        if (ltm != null && !ltm.isBlank()) {
-            promptBuilder.append("Long term memory to add context: ").append(ltm.replace("\"", "'"))
-                         .append("\n");
-        }
-
-        return promptBuilder.toString();
-    }
-
     private String parseFinalResponse(String rawResponse) {
         if (rawResponse == null) {
             return null;
@@ -246,27 +169,7 @@ public class ScreenAnalysisAction implements Action {
     return (spokenFromBrackets != null && !spokenFromBrackets.isBlank()) ? spokenFromBrackets.trim() : null;
     }
 
-    // Removed cache: routing is done immediately via local raw content
-
-    private String processMultimodal(BufferedImage image) throws Exception {
-        String personalityPrompt = PersonalityManager.getCurrentMultimodalPrompt();
-
-        System.out.println("DEBUG: Multimodal prompt from personality: " + personalityPrompt);
-
-        if (personalityPrompt == null || personalityPrompt.trim().isEmpty()) {
-            System.err.println("No multimodal personality prompt found, falling back to traditional mode.");
-            String imageDescription = analyzeImage(image);
-            return generateResponse(imageDescription);
-        }
-
-        String unified = currentUnifiedPrompt != null ? currentUnifiedPrompt : "";
-        String finalPrompt = unified.isBlank() ? getFinalPrompt(personalityPrompt) : unified + "\n\n" + getFinalPrompt(personalityPrompt);
-        System.out.println("Final multimodal prompt sent: " + finalPrompt);
-
-        return ApiClient.analyzeImageMultimodal(image, finalPrompt);
-    }
-
-    private static String getFinalPrompt(String personalityPrompt) {
+    private static String getSpeakTaskAppends(String personalityPrompt) {
         StringBuilder promptBuilder = new StringBuilder();
         promptBuilder.append(personalityPrompt);
         

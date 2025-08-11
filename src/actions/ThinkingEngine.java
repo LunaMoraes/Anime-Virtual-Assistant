@@ -65,8 +65,11 @@ public class ThinkingEngine {
                 // Copy then clear
                 java.util.List<String> copy = new java.util.ArrayList<>(queued);
                 queued.clear();
+                // Collect expected bracket prefixes for this tick (if any)
+                @SuppressWarnings("unchecked")
+                java.util.List<String> expectedPrefixes = (java.util.List<String>) global.get("expected_bracket_prefixes", java.util.List.class);
                 for (String raw : copy) {
-                    routeBracketSections(raw, actionManager.getRegisteredActions(), global);
+                    routeBracketSections(raw, actionManager.getRegisteredActions(), global, expectedPrefixes);
                 }
             }
         } catch (Exception e) {
@@ -101,11 +104,16 @@ public class ThinkingEngine {
 
         // Brain actions, maintenance actions should come first.
 
+        // Prepare expected bracket prefixes for this tick
+        java.util.List<String> expectedBracketPrefixes = new java.util.ArrayList<>();
         // levels_task contributes level system task.
         if (actionManager.hasAction("levels_task")) {
             ActionResult r = actionManager.executeAction("levels_task", context);
             if (r.isFailure()) {
                 System.err.println("levels_task failed: " + r.getMessage());
+            } else {
+                // Add levels: prefix for this tick
+                expectedBracketPrefixes.addAll(((BracketAwareAction)actionManager.getRegisteredActions().stream().filter(a -> a.getActionId().equals("levels_task")).findFirst().orElse(null)).getBracketPrefixes());
             }
         }
 
@@ -114,8 +122,12 @@ public class ThinkingEngine {
             ActionResult r = actionManager.executeAction("memory_task", context);
             if (r.isFailure()) {
                 System.err.println("memory_task failed: " + r.getMessage());
+            } else {
+                expectedBracketPrefixes.addAll(((BracketAwareAction)actionManager.getRegisteredActions().stream().filter(a -> a.getActionId().equals("memory_task")).findFirst().orElse(null)).getBracketPrefixes());
             }
         }
+        // Store expectedBracketPrefixes in global for this tick (for queued routing)
+        global.put("expected_bracket_prefixes", expectedBracketPrefixes);
 
         // Now execute the screen analysis action which will assemble the full LLM prompt
         if (defaultChatBlockedBy.isEmpty() && shouldChatThisTick) {
@@ -149,12 +161,16 @@ public class ThinkingEngine {
                     String tasksOnlyPrompt = buildTasksOnlyPrompt(context);
                     if (tasksOnlyPrompt != null && !tasksOnlyPrompt.isBlank()) {
                         System.out.println("Running tasks-only request...");
-                        System.out.println("Tasks-only prompt:\n" + tasksOnlyPrompt);
-                        String rawTasksResponse = api.ApiClient.generateResponse(tasksOnlyPrompt);
+                        BufferedImage shot = context.contains("screenshot") ? context.get("screenshot", BufferedImage.class) : null;
+                        String rawTasksResponse = null;
+                        try {
+                            rawTasksResponse = runImageAwarePromptFlow(shot, tasksOnlyPrompt, expectedBracketPrefixes, actionManager.getRegisteredActions(), global);
+                        } catch (Exception ex) {
+                            System.err.println("Error during tasks-only processing: " + ex.getMessage());
+                        }
+
                         if (rawTasksResponse != null && !rawTasksResponse.isBlank()) {
                             System.out.println("Tasks-only RAW model output: " + rawTasksResponse);
-                            // Route immediately so task effects apply this tick
-                            routeBracketSections(rawTasksResponse, actionManager.getRegisteredActions(), global);
                         } else {
                             System.out.println("Tasks-only request returned no content.");
                         }
@@ -182,11 +198,62 @@ public class ThinkingEngine {
         return finalPrompt.toString();
     }
 
-    public static void routeBracketSections(String raw, java.util.Collection<Action> actions, ActionContext context) {
+    /**
+     * Shared helper to run an image-aware prompt flow (multimodal, vision, or text-only),
+     * then route bracket sections using expected prefixes. Returns the raw model output.
+     * @param shot Screenshot (nullable)
+     * @param prompt The prompt to send
+     * @param expectedBracketPrefixes List of bracket prefixes to check for this tick (nullable)
+     * @param actions Registered actions for bracket routing
+     * @param context The global context for bracket routing
+     */
+    public static String runImageAwarePromptFlow(BufferedImage shot, String prompt, List<String> expectedBracketPrefixes, java.util.Collection<Action> actions, ActionContext context) throws Exception {
+        if (prompt == null || prompt.isBlank()) return null;
+        String rawModelOutput;
+        if (shot != null) {
+            if (core.AppState.useMultimodal()) {
+                System.out.println("Image-aware (multimodal) with screenshot");
+                System.out.println("Prompt (multimodal):\n" + prompt);
+                rawModelOutput = api.ApiClient.analyzeImageMultimodal(shot, prompt);
+            } else {
+                System.out.println("Image-aware (traditional) vision -> analysis");
+                String vPrompt = config.ConfigurationManager.getVisionPrompt();
+                String desc = api.ApiClient.analyzeImage(shot, vPrompt);
+                if (desc != null && !desc.isBlank()) {
+                    String finalPrompt = prompt + "\n\nBased on this activity: " + desc;
+                    System.out.println("Final prompt (traditional):\n" + finalPrompt);
+                    rawModelOutput = api.ApiClient.generateResponse(finalPrompt);
+                } else {
+                    System.err.println("Image-aware: vision returned no description; falling back to text-only prompt.");
+                    System.out.println("Prompt (text-only fallback):\n" + prompt);
+                    rawModelOutput = api.ApiClient.generateResponse(prompt);
+                }
+            }
+        } else {
+            // No screenshot available; fallback to text-only prompt
+            System.out.println("Image-aware (no screenshot) using text-only prompt");
+            System.out.println("Prompt (text-only):\n" + prompt);
+            rawModelOutput = api.ApiClient.generateResponse(prompt);
+        }
+
+        System.out.println("Raw model output (after routing):\n" + rawModelOutput);
+        // Route bracket sections using expected prefixes
+        routeBracketSections(rawModelOutput, actions, context, expectedBracketPrefixes);
+        return rawModelOutput;
+    }
+
+    /**
+     * Routes bracketed sections in the model output to BracketAwareActions, and checks for expected prefixes.
+     * @param raw The raw model output
+     * @param actions Registered actions
+     * @param context Global context
+     * @param expectedPrefixes List of bracket prefixes to check for this tick (nullable)
+     */
+    public static void routeBracketSections(String raw, java.util.Collection<Action> actions, ActionContext context, List<String> expectedPrefixes) {
         if (raw == null || raw.isBlank() || actions == null || actions.isEmpty()) return;
         int idx = 0;
         boolean anyFound = false;
-        int levelsCount = 0;
+        java.util.Set<String> foundPrefixes = new java.util.HashSet<>();
         while ((idx = raw.indexOf('[', idx)) != -1) {
             int end = raw.indexOf(']', idx + 1);
             if (end == -1) break;
@@ -195,7 +262,14 @@ public class ThinkingEngine {
             if (!inside.startsWith("speak:")) {
                 System.out.println("Bracketed section found: [" + inside + "]");
             }
-            if (inside.startsWith("levels:")) levelsCount++;
+            // Track found prefixes
+            if (expectedPrefixes != null) {
+                for (String prefix : expectedPrefixes) {
+                    if (inside.startsWith(prefix)) {
+                        foundPrefixes.add(prefix);
+                    }
+                }
+            }
             for (Action a : actions) {
                 if (a instanceof BracketAwareAction baa) {
                     for (String p : baa.getBracketPrefixes()) {
@@ -210,8 +284,12 @@ public class ThinkingEngine {
         }
         if (!anyFound) {
             System.out.println("No bracketed sections found in model output.");
-        } else if (levelsCount == 0) {
-            System.out.println("No [levels:...] command found; no level changes will be applied this cycle.");
+        } else if (expectedPrefixes != null && !expectedPrefixes.isEmpty()) {
+            for (String prefix : expectedPrefixes) {
+                if (!foundPrefixes.contains(prefix)) {
+                    System.out.println("No [" + prefix + "...] command found; no effect for this prefix this cycle.");
+                }
+            }
         }
     }
 
