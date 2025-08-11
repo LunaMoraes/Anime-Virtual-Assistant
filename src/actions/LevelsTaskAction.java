@@ -43,12 +43,6 @@ public class LevelsTaskAction implements BracketAwareAction {
         // Compose content strictly from configuration files and data; SA will just append this
         StringBuilder other = context.contains("other_task_content") ? context.get("other_task_content", StringBuilder.class) : new StringBuilder();
 
-        // Global tasks instruction from system.json
-        String tasksInstruction = config.ConfigurationManager.getTasksInstruction();
-        if (tasksInstruction != null && !tasksInstruction.isBlank()) {
-            other.append(tasksInstruction).append("\n\n");
-        }
-
         // data/levels/prompts.json sections
         try {
             java.nio.file.Path p = java.nio.file.Path.of("data", "levels", "prompts.json");

@@ -1,7 +1,6 @@
 package actions;
 
 import com.google.gson.Gson;
-import config.ConfigurationManager;
 import core.AppState;
 import personality.PersonalityManager;
 
@@ -46,15 +45,11 @@ public class MemoryTaskAction implements BracketAwareAction {
             data.put("short_term_memory", config.MemoryStore.getShortTerm());
             data.put("long_term_memory", config.MemoryStore.getLongTerm());
 
-            String tasksInstruction = ConfigurationManager.getTasksInstruction();
             boolean willRunSA = context.contains("will_run_screen_analysis") && Boolean.TRUE.equals(context.get("will_run_screen_analysis", Boolean.class));
 
             // ALWAYS prepare the content - needed for both unified prompt AND tasks-only request
             StringBuilder sb = context.contains("other_task_content") ? context.get("other_task_content", StringBuilder.class) : new StringBuilder();
             if (sb == null) sb = new StringBuilder();
-            if (tasksInstruction != null && !tasksInstruction.isBlank()) {
-                sb.append(tasksInstruction).append('\n').append('\n');
-            }
             sb.append(instructions).append('\n');
             // Standardized payload label
             com.google.gson.JsonObject wrapper = new com.google.gson.JsonObject();

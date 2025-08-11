@@ -99,6 +99,7 @@ public class ScreenAnalysisAction implements Action {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void processAndRespond(BufferedImage image) throws Exception {
         String selectedTtsVoice = AppState.selectedTtsCharacterVoice;
         String selectedLanguage = AppState.selectedLanguage;
@@ -109,10 +110,23 @@ public class ScreenAnalysisAction implements Action {
             : PersonalityManager.getCurrentPersonalityPrompt();
         // Add the essential speak task appends (speak prompts, memory, last 5 comments, etc.)
         String fullPersonalityPrompt = getSpeakTaskAppends(personalityPrompt);
-        String prompt = (unified.isBlank() ? fullPersonalityPrompt : unified + "\n\n" + fullPersonalityPrompt);
+        
+        String prompt;
+        if (unified.isBlank()) {
+            // No tasks, just personality prompt
+            prompt = fullPersonalityPrompt;
+        } else {
+            // Tasks present, need to add tasks instruction at the beginning
+            String tasksInstruction = config.ConfigurationManager.getTasksInstruction();
+            StringBuilder promptBuilder = new StringBuilder();
+            if (tasksInstruction != null && !tasksInstruction.isBlank()) {
+                promptBuilder.append(tasksInstruction).append("\n\n");
+            }
+            promptBuilder.append(unified).append("\n\n").append(fullPersonalityPrompt);
+            prompt = promptBuilder.toString();
+        }
 
         // Get expected bracket prefixes from global context if available
-        @SuppressWarnings("unchecked")
         List<String> expectedBracketPrefixes = null;
         ActionContext global = currentGlobalContext;
         if (global != null && global.contains("expected_bracket_prefixes")) {
