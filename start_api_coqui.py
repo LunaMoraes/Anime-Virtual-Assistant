@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 from flask import Flask, request, jsonify, send_file
 import torch
 import io
@@ -107,6 +107,7 @@ def synthesize():
     # Get optional parameters
     character = request.json.get('character', DEFAULT_MODEL)
     speed = float(request.json.get('speed', 1.0))
+    language = request.json.get('language', 'en')  # 👈 default to English if not given
 
     print(f"Received request to synthesize: '{text}' with character: '{character}', speed: {speed}")
 
@@ -126,7 +127,7 @@ def synthesize():
 
         if speaker_name:
             # Multi-speaker model
-            audio_data = tts_model.tts(text=text, speaker=speaker_name, language="en")
+            audio_data = tts_model.tts(text=text, speaker=speaker_name, language=language)
         else:
             # Single speaker model
             audio_data = tts_model.tts(text=text)
