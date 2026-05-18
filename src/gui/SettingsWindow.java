@@ -252,25 +252,10 @@ public class SettingsWindow extends JFrame {
     settingsTab.add(chatFreqSection);
     settingsTab.add(Box.createVerticalStrut(20));
 
-        // Multimodal section
-        JPanel multimodalSection = createSection("Multimodal Model", new MultimodalPanel(this::refreshSettingsTab));
-        settingsTab.add(multimodalSection);
+        // Model section
+        JPanel modelSection = createSection("Model Settings", new UnifiedModelPanel(this::refreshSettingsTab));
+        settingsTab.add(modelSection);
         settingsTab.add(Box.createVerticalStrut(20));
-
-        // Conditional sections based on multimodal mode
-        if (AppState.useMultimodal()) {
-            // Show unified Model Settings section
-            JPanel modelSection = createSection("Model Settings", new UnifiedModelPanel());
-            settingsTab.add(modelSection);
-        } else {
-            // Show separate Vision and Analysis sections
-            JPanel visionSection = createSection("Vision Model", new VisionModelPanel());
-            settingsTab.add(visionSection);
-            settingsTab.add(Box.createVerticalStrut(20));
-
-            JPanel analysisSection = createSection("Analysis Model", new AnalysisModelPanel());
-            settingsTab.add(analysisSection);
-        }
 
         // Add flexible space at the bottom
         settingsTab.add(Box.createVerticalGlue());
@@ -447,12 +432,47 @@ public class SettingsWindow extends JFrame {
         Container parent = this.getContentPane();
         JTabbedPane tabbedPane = findTabbedPane(parent);
         if (tabbedPane != null) {
+            int scrollPosition = 0;
+            Component currentSettingsTab = tabbedPane.getComponentAt(1);
+            JScrollPane currentScrollPane = findScrollPane(currentSettingsTab);
+            if (currentScrollPane != null) {
+                scrollPosition = currentScrollPane.getVerticalScrollBar().getValue();
+            }
+
             // Recreate the settings tab
             JPanel newSettingsTab = createSettingsTab();
             tabbedPane.setComponentAt(1, newSettingsTab); // Settings tab is at index 1
             tabbedPane.revalidate();
             tabbedPane.repaint();
+
+            int finalScrollPosition = scrollPosition;
+            SwingUtilities.invokeLater(() -> {
+                JScrollPane newScrollPane = findScrollPane(newSettingsTab);
+                if (newScrollPane != null) {
+                    JScrollBar verticalBar = newScrollPane.getVerticalScrollBar();
+                    verticalBar.setValue(Math.min(finalScrollPosition, verticalBar.getMaximum()));
+                }
+            });
         }
+    }
+
+    private JScrollPane findScrollPane(Component root) {
+        if (root instanceof JScrollPane) {
+            return (JScrollPane) root;
+        }
+        if (!(root instanceof Container container)) {
+            return null;
+        }
+
+        for (Component component : container.getComponents()) {
+            if (component instanceof JScrollPane) {
+                return (JScrollPane) component;
+            } else if (component instanceof Container) {
+                JScrollPane found = findScrollPane(component);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private JTabbedPane findTabbedPane(Container container) {

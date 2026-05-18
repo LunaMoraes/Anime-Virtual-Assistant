@@ -9,7 +9,7 @@ This guide is the working developer setup for Anime Virtual Assistant. It favors
 - Maven 3.9 or newer.
 - Python 3.12 for the optional local TTS sidecar.
 - Optional: NVIDIA CUDA-compatible GPU for faster Python/Torch workloads.
-- Optional: Ollama for local language-model mode.
+- Optional: Ollama or LM Studio for local language-model mode.
 - Optional: Google Gemini API key for external API mode.
 
 ## Clone
@@ -69,8 +69,9 @@ The main window can open without starting the TTS sidecar. If TTS is enabled and
 | ------- | ------------ | ---- | ------- | ----- |
 | Java Swing app | Main UI and assistant loop | none | `java -jar target/anime-virtual-assistant-0.1.0-SNAPSHOT.jar` | Run after `mvn clean package`. |
 | Google Gemini-compatible API | External analysis, vision, or multimodal mode | remote HTTPS | none | Configure `data/system/system.json`; enable API modes in Settings. |
-| Ollama | Local language-model mode | `11434` | `ollama serve` | Code currently calls `http://localhost:11434/api/generate` with model `qwen3:4b`. |
+| Ollama | Local language-model mode | `11434` | `ollama serve` | Default endpoint is `http://localhost:11434/api/generate` with model `qwen3:4b`. |
 | Ollama model | Local language responses | `11434` | `ollama pull qwen3:4b` | Required before running local analysis mode. |
+| LM Studio | Local multimodal language-model mode | `1234` | Start the LM Studio local server | Default endpoint is `http://127.0.0.1:1234/v1/chat/completions` with model `google/gemma-4-e4b`. |
 | Local vision service | Local image description mode | `5002` | TBD | Code calls `http://localhost:5002/describe`; no server implementation is currently committed. Use external multimodal/API mode until this is added. |
 | Coqui TTS sidecar | Optional local speech synthesis | `5005` | `py -3.12 start_api_coqui.py` | Optional for now; required only when TTS is enabled. |
 
@@ -82,12 +83,15 @@ This is currently the easiest full assistant path because it avoids the missing 
 2. Fill `multimodal.key`, `multimodal.model_name`, and `multimodal.url`.
 3. Optionally fill `analysis` and `vision` with the same API config.
 4. Build and run the Java app.
-5. In Settings, keep Multimodal enabled and choose API for the multimodal model.
-6. Start the assistant from the UI.
+5. In Settings, choose `Model Settings` -> `API`.
+6. Keep `Enable Multimodal (Vision)` checked for the external multimodal path, or uncheck it to use API vision and API analysis separately.
+7. Start the assistant from the UI.
 
 ## Local LLM Mode
 
-Local language generation currently assumes Ollama.
+Local language generation supports Ollama and LM Studio. Choose the backend in Settings under `Model Settings`.
+
+### Ollama
 
 Install and start Ollama, then pull the configured model:
 
@@ -96,7 +100,17 @@ ollama pull qwen3:4b
 ollama serve
 ```
 
-In Settings, choose Local for analysis/multimodal where applicable.
+In Settings, choose `Local`, then choose `Ollama`.
+
+### LM Studio
+
+1. Open LM Studio.
+2. Load a local vision-capable model. The default app model name is `google/gemma-4-e4b`.
+3. Start the local server with the OpenAI-compatible endpoint enabled.
+4. Confirm the server is listening at `http://127.0.0.1:1234/v1/chat/completions`.
+5. In Settings, choose `Model Settings` -> `Local` -> `LM Studio`.
+
+When `Local` is selected, multimodal vision is always enabled. The multimodal checkbox is checked and locked; LM Studio receives the screenshot directly, while Ollama uses the local vision fallback.
 
 Important: local multimodal fallback still needs image descriptions from the local vision service at `http://localhost:5002/describe`. That service is not present in this repo yet, so pure local vision/multimodal mode is incomplete until a vision server is added or the code is changed.
 
@@ -155,6 +169,30 @@ Fix:
 ollama pull qwen3:4b
 ollama serve
 ```
+
+### LM Studio Server Not Running
+
+Symptom: local multimodal requests fail or log connection errors for `127.0.0.1:1234`.
+
+Fix: open LM Studio, load the configured model, and start the local server.
+
+### LM Studio Wrong Port
+
+Symptom: LM Studio is running, but the app still logs connection errors for `127.0.0.1:1234`.
+
+Fix: either start LM Studio on port `1234` or override the endpoint with `LM_STUDIO_CHAT_URL`.
+
+### LM Studio Wrong Model
+
+Symptom: LM Studio returns a model-not-found error or never routes requests to the expected loaded model.
+
+Fix: load `google/gemma-4-e4b` or override the model name with `LM_STUDIO_MODEL`.
+
+### LM Studio Incompatible Response
+
+Symptom: the app logs an empty, unexpected, or incompatible LM Studio response.
+
+Fix: use the OpenAI-compatible chat completions endpoint, load a vision-capable model, and confirm the response includes `choices[0].message.content`.
 
 ### Local Vision Server Missing
 

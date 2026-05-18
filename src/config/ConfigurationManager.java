@@ -1,11 +1,23 @@
 package config;
 
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+
 /**
  * Manages all configuration loading and access for the application.
  * Centralizes system.json and userSettings.json management.
  */
 public class ConfigurationManager {
+    private static final String SYSTEM_CONFIG_FILE = "data/system/system.json";
+    private static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().create();
+
     private static SystemConfig systemConfig = null;
     private static UserSettings userSettings = null;
     private static PromptsConfig promptsConfig = null;
@@ -77,7 +89,16 @@ public class ConfigurationManager {
      * Gets local language-model backend provider.
      */
     public static String getLocalLlmProvider() {
-        return systemConfig != null ? systemConfig.getLocalLlm() : null;
+        String provider = systemConfig != null ? systemConfig.getLocalLlm() : null;
+        return provider != null && !provider.isBlank() ? provider : "ollama";
+    }
+
+    public static void setLocalLlmProvider(String provider) {
+        String normalizedProvider = normalizeLocalLlmProvider(provider);
+        if (systemConfig != null) {
+            systemConfig.setLocalLlm(normalizedProvider);
+        }
+        saveLocalLlmProvider(normalizedProvider);
     }
 
     /**
@@ -225,6 +246,37 @@ public class ConfigurationManager {
         if (userSettings != null) {
             userSettings.setChatFrequency(frequency);
             saveUserSettings();
+        }
+    }
+
+    private static String normalizeLocalLlmProvider(String provider) {
+        if (provider != null) {
+            String lower = provider.trim().toLowerCase();
+            if ("lm_studio".equals(lower) || "lm-studio".equals(lower) || "lmstudio".equals(lower)) {
+                return "lm_studio";
+            }
+        }
+
+        return "ollama";
+    }
+
+    private static void saveLocalLlmProvider(String provider) {
+        File configFile = new File(SYSTEM_CONFIG_FILE);
+        if (!configFile.exists()) {
+            System.err.println("Cannot save local LLM provider; system config file not found: " + configFile.getAbsolutePath());
+            return;
+        }
+
+        try (FileReader reader = new FileReader(configFile)) {
+            JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+            root.addProperty("local_llm", provider);
+
+            try (FileWriter writer = new FileWriter(configFile)) {
+                PRETTY_GSON.toJson(root, writer);
+            }
+            System.out.println("Local LLM provider changed to: " + provider);
+        } catch (Exception e) {
+            System.err.println("Error saving local LLM provider: " + e.getMessage());
         }
     }
 

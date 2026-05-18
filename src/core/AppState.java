@@ -139,6 +139,10 @@ public class AppState {
         System.out.println("Multimodal model changed to: " + (useApi ? "API" : "Local"));
     }
 
+    public static void setLocalLlmProvider(String provider) {
+        ConfigurationManager.setLocalLlmProvider(provider);
+    }
+
     public static boolean useApiVision() {
         return ConfigurationManager.useApiVision();
     }
@@ -153,6 +157,10 @@ public class AppState {
 
     public static boolean useApiMultimodal() {
         return ConfigurationManager.useApiMultimodal();
+    }
+
+    public static String getLocalLlmProvider() {
+        return ConfigurationManager.getLocalLlmProvider();
     }
 
     public static boolean useTTS() {

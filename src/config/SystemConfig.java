@@ -34,6 +34,10 @@ public class SystemConfig {
         return local_llm;
     }
 
+    public void setLocalLlm(String localLlm) {
+        this.local_llm = localLlm;
+    }
+
     public PromptsConfig getPrompts() {
         return prompts;
     }
