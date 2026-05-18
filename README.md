@@ -23,6 +23,8 @@
 
 ## 🚀 Quick Start
 
+For a full development setup, service matrix, and troubleshooting notes, see [`SETUP.md`](SETUP.md).
+
 ### **Prerequisites**
 [![Java](https://img.shields.io/badge/Java-21-ff69b4?logo=openjdk&logoColor=white)](https://www.oracle.com/br/java/technologies/downloads/)
 [![Python](https://img.shields.io/badge/Python-3.12-87cefa?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
