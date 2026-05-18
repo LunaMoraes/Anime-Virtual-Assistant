@@ -230,12 +230,12 @@ public class ScreenAnalysisAction implements Action {
 
     // removed removeBracketSections: speech is driven only by [speak:(...)]
 
-    // Extract ONLY [speak:(...)] sections for TTS
+    // Extract the last real [speak:(...)] section for TTS.
     private String collectSpeakSections(String s) {
         if (s == null || s.isEmpty()) return "";
-        StringBuilder preferred = new StringBuilder();
         int idx = 0;
         int preferredCount = 0;
+        String lastPayload = "";
         while ((idx = s.indexOf('[', idx)) != -1) {
             int end = s.indexOf(']', idx + 1);
             if (end == -1) break;
@@ -246,15 +246,16 @@ public class ScreenAnalysisAction implements Action {
                 String payload = (lp != -1 && rp > lp)
                         ? inside.substring(lp + 1, rp)
                         : inside.substring("speak:".length()).trim();
-                if (preferred.length() > 0) preferred.append(' ');
-                preferred.append(payload);
+                if (!payload.isBlank() && !"content".equals(payload.trim())) {
+                    lastPayload = payload;
+                }
                 preferredCount++;
             }
             idx = end + 1;
         }
         if (preferredCount > 0) {
             System.out.println("Collected " + preferredCount + " [speak:(...)] section(s).");
-            return preferred.toString();
+            return lastPayload;
         }
         return "";
     }

@@ -39,8 +39,6 @@ public final class ModelClientFactory {
     public static MultimodalClient createMultimodalClient() {
         return new ConfiguredMultimodalClient(
             new GeminiMultimodalClient(GEMINI_API_CLIENT),
-            new GeminiVisionClient(GEMINI_API_CLIENT),
-            new GeminiLanguageModelClient(GEMINI_API_CLIENT),
             LOCAL_LANGUAGE_MODEL_CLIENT_FACTORY
         );
     }

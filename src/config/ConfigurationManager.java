@@ -313,7 +313,7 @@ public class ConfigurationManager {
     public static String getTasksInstruction() {
     return promptsConfig != null && promptsConfig.getTasksInstruction() != null ?
            promptsConfig.getTasksInstruction() :
-               "You will receive a few tasks, for each task you will provide a different response. Use '[]' to wrap the response asked by the specific task. An ideal response will consist of multiple sequences of [] with the response inside for each.";
+               "You may receive one or more tasks. Return ONLY the final bracketed command sections requested by those tasks. Start the first character of your response with '['. For each task, output exactly one bracketed section using that task's required prefix and payload. Do not explain, reason, draft, list checks, restate the tasks, or copy placeholder formats.";
     }
 
     /**
@@ -322,6 +322,6 @@ public class ConfigurationManager {
     public static String getSpeakTaskPrompt() {
     return promptsConfig != null && promptsConfig.getSpeakTaskPrompt() != null ?
         promptsConfig.getSpeakTaskPrompt() :
-        " For this task, output your spoken sentence wrapped exactly as [speak:(content)].";
+        " Task: For this task, output exactly one bracketed section whose content starts with speak: and contains your spoken sentence in parentheses. Do not use the placeholder word content. Do not include analysis, drafts, lists, formatting, emojis, or text outside the speak section.";
     }
 }

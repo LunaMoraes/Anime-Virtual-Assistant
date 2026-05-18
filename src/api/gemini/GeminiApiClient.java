@@ -53,8 +53,8 @@ public final class GeminiApiClient {
 
         Map<String, Object> textPart = Map.of("text", prompt);
         Map<String, Object> imagePart = Map.of(
-            "inline_data", Map.of(
-                "mime_type", "image/jpeg",
+            "inlineData", Map.of(
+                "mimeType", "image/jpeg",
                 "data", base64Image
             )
         );
@@ -69,6 +69,7 @@ public final class GeminiApiClient {
             )
         );
 
+        System.out.println(logLabel + " API image payload format: inlineData/mimeType");
         return send(config, payload, logLabel, "Vision".equals(logLabel));
     }
 
@@ -102,10 +103,13 @@ public final class GeminiApiClient {
                 if (candidate.has("content")) {
                     JsonObject content = candidate.getAsJsonObject("content");
                     if (content.has("parts") && !content.getAsJsonArray("parts").isEmpty()) {
-                        JsonObject part = content.getAsJsonArray("parts").get(0).getAsJsonObject();
-                        if (part.has("text")) {
-                            System.out.println(logLabel + " API response received successfully");
-                            return part.get("text").getAsString().trim();
+                        for (int i = 0; i < content.getAsJsonArray("parts").size(); i++) {
+                            JsonObject part = content.getAsJsonArray("parts").get(i).getAsJsonObject();
+                            boolean isThought = part.has("thought") && part.get("thought").getAsBoolean();
+                            if (!isThought && part.has("text")) {
+                                System.out.println(logLabel + " API response received successfully");
+                                return part.get("text").getAsString().trim();
+                            }
                         }
                     }
                 }

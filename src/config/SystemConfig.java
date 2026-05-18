@@ -116,7 +116,7 @@ public class SystemConfig {
 
         public String getTasksInstruction() {
             return tasks != null ? tasks :
-                "You will receive a few tasks, for each task you will provide a different response. Use '[]' to wrap the response asked by the specific task. An ideal response will consist of multiple sequences of [] with the response inside for each.";
+                "You may receive one or more tasks. Return ONLY the final bracketed command sections requested by those tasks. Start the first character of your response with '['. For each task, output exactly one bracketed section using that task's required prefix and payload. Do not explain, reason, draft, list checks, restate the tasks, or copy placeholder formats.";
         }
     }
 }

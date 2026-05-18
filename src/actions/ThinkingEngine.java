@@ -255,6 +255,7 @@ public class ThinkingEngine {
         int idx = 0;
         boolean anyFound = false;
         java.util.Set<String> foundPrefixes = new java.util.HashSet<>();
+        java.util.Set<String> handledSections = new java.util.HashSet<>();
         while ((idx = raw.indexOf('[', idx)) != -1) {
             int end = raw.indexOf(']', idx + 1);
             if (end == -1) break;
@@ -275,7 +276,11 @@ public class ThinkingEngine {
                 if (a instanceof BracketAwareAction baa) {
                     for (String p : baa.getBracketPrefixes()) {
                         if (inside.startsWith(p)) {
-                            try { baa.handleBracket(inside, context); } catch (Throwable ignored) {}
+                            if (handledSections.add(inside)) {
+                                try { baa.handleBracket(inside, context); } catch (Throwable ignored) {}
+                            } else {
+                                System.out.println("Duplicate bracket section ignored: [" + inside + "]");
+                            }
                             break;
                         }
                     }
