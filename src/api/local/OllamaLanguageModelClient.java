@@ -1,4 +1,4 @@
-package api;
+package api.local;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 
 class OllamaLanguageModelClient implements LocalLanguageModelClient {
@@ -39,15 +40,37 @@ class OllamaLanguageModelClient implements LocalLanguageModelClient {
             "options", Map.of("temperature", 0.7)
         );
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(DEFAULT_URL))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
-                .build();
-
         System.out.println("Sending request to Ollama: " + DEFAULT_MODEL + " at " + DEFAULT_URL);
+        return sendGenerate(payload);
+    }
+
+    @Override
+    public boolean supportsImages() {
+        return true;
+    }
+
+    @Override
+    public String generateWithImage(String prompt, String base64Image, String mimeType) throws IOException, InterruptedException {
+        Map<String, Object> payload = Map.of(
+            "model", DEFAULT_MODEL,
+            "prompt", prompt,
+            "images", List.of(base64Image),
+            "stream", false,
+            "options", Map.of("temperature", 0.7)
+        );
+
+        System.out.println("Sending multimodal request to Ollama: " + DEFAULT_MODEL + " at " + DEFAULT_URL);
+        return sendGenerate(payload);
+    }
+
+    private String sendGenerate(Map<String, Object> payload) throws IOException, InterruptedException {
         try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(DEFAULT_URL))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(60))
+                    .POST(HttpRequest.BodyPublishers.ofString(gson.toJson(payload)))
+                    .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {

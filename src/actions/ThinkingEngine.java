@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+import api.ModelClientFactory;
 import core.AppState;
 
 /**
@@ -211,29 +212,29 @@ public class ThinkingEngine {
         if (prompt == null || prompt.isBlank()) return null;
         String rawModelOutput;
         if (shot != null) {
-            if (core.AppState.useMultimodal()) {
+            if (core.AppState.useMultimodal() || !core.AppState.useApiMultimodal()) {
                 System.out.println("Image-aware (multimodal) with screenshot");
                 System.out.println("Prompt (multimodal):\n" + prompt);
-                rawModelOutput = api.ApiClient.analyzeImageMultimodal(shot, prompt);
+                rawModelOutput = ModelClientFactory.createMultimodalClient().analyze(shot, prompt);
             } else {
                 System.out.println("Image-aware (traditional) vision -> analysis");
                 String vPrompt = config.ConfigurationManager.getVisionPrompt();
-                String desc = api.ApiClient.analyzeImage(shot, vPrompt);
+                String desc = ModelClientFactory.createVisionClient().analyze(shot, vPrompt);
                 if (desc != null && !desc.isBlank()) {
                     String finalPrompt = prompt + "\n\nBased on this activity: " + desc;
                     System.out.println("Final prompt (traditional):\n" + finalPrompt);
-                    rawModelOutput = api.ApiClient.generateResponse(finalPrompt);
+                    rawModelOutput = ModelClientFactory.createApiLanguageModelClient().generate(finalPrompt);
                 } else {
                     System.err.println("Image-aware: vision returned no description; falling back to text-only prompt.");
                     System.out.println("Prompt (text-only fallback):\n" + prompt);
-                    rawModelOutput = api.ApiClient.generateResponse(prompt);
+                    rawModelOutput = ModelClientFactory.createApiLanguageModelClient().generate(prompt);
                 }
             }
         } else {
             // No screenshot available; fallback to text-only prompt
             System.out.println("Image-aware (no screenshot) using text-only prompt");
             System.out.println("Prompt (text-only):\n" + prompt);
-            rawModelOutput = api.ApiClient.generateResponse(prompt);
+            rawModelOutput = ModelClientFactory.createLanguageModelClient().generate(prompt);
         }
 
         System.out.println("Raw model output (after routing):\n" + rawModelOutput);

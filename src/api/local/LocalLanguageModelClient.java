@@ -1,11 +1,11 @@
-package api;
+package api.local;
 
 import java.io.IOException;
 
 /**
  * Generates text with a locally hosted language model backend.
  */
-interface LocalLanguageModelClient {
+public interface LocalLanguageModelClient {
     String getBackendName();
 
     String generate(String prompt) throws IOException, InterruptedException;
