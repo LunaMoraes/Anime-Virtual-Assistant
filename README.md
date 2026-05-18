@@ -62,13 +62,27 @@ py -3.12 start_api_coqui.py
 
 #### 2️⃣ Launch the Assistant
 
-Double-click `VirtualAssistant.jar` → Press **"Start Assistant"**.
+Build the assistant from source:
+
+```bash
+mvn clean package
+```
+
+Run the generated application JAR from the repository root so the `data/` folder is available:
+
+```bash
+java -jar target/anime-virtual-assistant-0.1.0-SNAPSHOT.jar
+```
+
+Then press **"Start Assistant"**.
+
+The checked-in `VirtualAssistant.jar` is legacy and should not be treated as the canonical build path.
 
 ---
 
 ## 🔧 Optional: External API Setup
 
-For better responses, configure **Google Gemini** in `data/system/system.json`:
+For better responses, copy `data/system/system.example.json` to `data/system/system.json` and configure **Google Gemini** locally:
 
 ```json
 {
