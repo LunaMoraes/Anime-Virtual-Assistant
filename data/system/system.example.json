@@ -14,6 +14,7 @@
     "model_name": "",
     "url": ""
   },
+  "local_llm": "ollama",
 
   "prompts": {
     "vision_prompt": "Describe the user's activity in this image. Focus on the content and what they are doing. Do NOT use the words 'screenshot', 'screen', or 'image'.",

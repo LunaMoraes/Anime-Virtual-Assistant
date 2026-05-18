@@ -143,6 +143,10 @@ public class ScreenAnalysisAction implements Action {
             System.err.println("Error during image-aware prompt flow: " + e.getMessage());
         }
 
+        if (rawModelOutput == null || rawModelOutput.isBlank()) {
+            throw new IllegalStateException("Image-aware prompt returned no model output");
+        }
+
         String finalResponseToSpeak = parseFinalResponse(rawModelOutput);
         if (finalResponseToSpeak != null && !finalResponseToSpeak.isBlank()) {
             System.out.println("Spoken (after stripping brackets): " + finalResponseToSpeak);

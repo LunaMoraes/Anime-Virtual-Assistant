@@ -74,6 +74,13 @@ public class ConfigurationManager {
     }
 
     /**
+     * Gets local language-model backend provider.
+     */
+    public static String getLocalLlmProvider() {
+        return systemConfig != null ? systemConfig.getLocalLlm() : null;
+    }
+
+    /**
      * Checks if vision API configuration is available
      */
     public static boolean isVisionApiAvailable() {

@@ -12,6 +12,7 @@ public class SystemConfig {
     private ApiConfig analysis;
     private ApiConfig vision;
     private ApiConfig multimodal;
+    private String local_llm;
     private PromptsConfig prompts;
 
     // Default constructor for Gson
@@ -27,6 +28,10 @@ public class SystemConfig {
 
     public ApiConfig getMultimodal() {
         return multimodal;
+    }
+
+    public String getLocalLlm() {
+        return local_llm;
     }
 
     public PromptsConfig getPrompts() {

@@ -24,9 +24,7 @@ import java.util.Map;
  * Supports both local services and external APIs (Google Gemini).
  */
 public class ApiClient {
-    private static final String OLLAMA_API_URL = "http://localhost:11434/api/generate";
     private static final String VISION_API_URL = "http://localhost:5002/describe";
-    private static final String LANGUAGE_MODEL = "qwen3:4b";
 
     private static final Gson gson = new Gson();
     private static final HttpClient httpClient = HttpClient.newBuilder()
@@ -57,10 +55,16 @@ public class ApiClient {
             return callExternalMultimodalApi(prompt, image);
         } else {
             System.out.println("Using Multimodal API: " + ConfigurationManager.useApiMultimodal());
+            LocalLanguageModelClient localClient = createLocalLanguageModelClient();
+            if (localClient.supportsImages()) {
+                System.out.println("Using local multimodal backend: " + localClient.getBackendName());
+                return localClient.generateWithImage(prompt, encodeImageToBase64Png(image), "image/png");
+            }
+
             // Fallback to local processing - analyze image then generate response
             String imageDescription = callLocalVisionService(ConfigurationManager.getVisionPrompt(), image);
             if (imageDescription != null && !imageDescription.isBlank()) {
-                return callLocalLanguageModel(String.format(prompt + " Based on this activity: %s", imageDescription));
+                return localClient.generate(String.format(prompt + " Based on this activity: %s", imageDescription));
             }
             return null;
         }
@@ -163,39 +167,7 @@ public class ApiClient {
         if (ConfigurationManager.useApiAnalysis() && ConfigurationManager.isAnalysisApiAvailable()) {
             return callExternalLanguageApi(prompt);
         } else {
-            return callLocalOllama(prompt);
-        }
-    }
-
-    /**
-     * Calls local Ollama service
-     */
-    private static String callLocalOllama(String prompt) throws IOException, InterruptedException {
-        Map<String, Object> payload = Map.of(
-            "model", LANGUAGE_MODEL,
-            "prompt", prompt,
-            "stream", false,
-            "options", Map.of("temperature", 0.7)
-        );
-
-        String jsonPayload = gson.toJson(payload);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(OLLAMA_API_URL))
-                .header("Content-Type", "application/json")
-                .timeout(Duration.ofSeconds(60))
-                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                .build();
-
-        System.out.println("Sending request to Ollama: " + LANGUAGE_MODEL);
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() == 200) {
-            JsonObject jsonObject = JsonParser.parseString(response.body()).getAsJsonObject();
-            return jsonObject.get("response").getAsString();
-        } else {
-            System.err.printf("Ollama error - Status: %d, Response: %s%n", response.statusCode(), response.body());
-            return null;
+            return callLocalLanguageModel(prompt);
         }
     }
 
@@ -307,10 +279,26 @@ public class ApiClient {
     }
 
     /**
-     * Calls local language model (Ollama) with a specific prompt
+     * Calls the configured local language model backend with a specific prompt.
      */
     private static String callLocalLanguageModel(String prompt) throws IOException, InterruptedException {
-        return callLocalOllama(prompt);
+        LocalLanguageModelClient client = createLocalLanguageModelClient();
+        System.out.println("Using local language model backend: " + client.getBackendName());
+        return client.generate(prompt);
+    }
+
+    private static LocalLanguageModelClient createLocalLanguageModelClient() {
+        String provider = ConfigurationManager.getLocalLlmProvider();
+
+        if ("lm_studio".equalsIgnoreCase(provider) || "lm-studio".equalsIgnoreCase(provider) || "lmstudio".equalsIgnoreCase(provider)) {
+            return new LmStudioLanguageModelClient(gson, httpClient);
+        }
+
+        if (provider != null && !"ollama".equalsIgnoreCase(provider) && !provider.isBlank()) {
+            System.err.println("Unknown local LLM provider '" + provider + "'. Falling back to Ollama.");
+        }
+
+        return new OllamaLanguageModelClient(gson, httpClient);
     }
 
     // === Utility Methods ===
@@ -320,7 +308,28 @@ public class ApiClient {
      */
     private static String encodeImageToBase64(BufferedImage image) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ImageIO.write(image, "jpeg", baos);
+        BufferedImage jpegImage = image;
+        if (image.getColorModel().hasAlpha()) {
+            jpegImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
+            java.awt.Graphics2D graphics = jpegImage.createGraphics();
+            graphics.setColor(java.awt.Color.WHITE);
+            graphics.fillRect(0, 0, image.getWidth(), image.getHeight());
+            graphics.drawImage(image, 0, 0, null);
+            graphics.dispose();
+        }
+
+        if (!ImageIO.write(jpegImage, "jpeg", baos)) {
+            throw new IOException("No JPEG writer available for screenshot encoding");
+        }
+        byte[] imageBytes = baos.toByteArray();
+        return Base64.getEncoder().encodeToString(imageBytes);
+    }
+
+    private static String encodeImageToBase64Png(BufferedImage image) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        if (!ImageIO.write(image, "png", baos)) {
+            throw new IOException("No PNG writer available for screenshot encoding");
+        }
         byte[] imageBytes = baos.toByteArray();
         return Base64.getEncoder().encodeToString(imageBytes);
     }
